@@ -417,3 +417,55 @@ def logout(current_user: dict = Depends(get_current_user)):
     finally:
         cursor.close()
         conn.close()
+
+# ── TEMPORARY DEBUG ENDPOINT — remove before submission ──
+@router.post("/debug-login")
+def debug_login(data: VoterLogin):
+    """
+    Temporary endpoint to diagnose login issues.
+    Shows exactly what the system finds for a student number.
+    DELETE THIS before submitting your project.
+    """
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Step 1: Does the student number exist?
+        cursor.execute(
+            """
+            SELECT u.user_id, u.full_name, u.email,
+                   u.password_hash, u.role, u.is_active,
+                   v.student_number
+            FROM voters v
+            JOIN users u ON v.user_id = u.user_id
+            WHERE v.student_number = %s
+            """,
+            (data.student_number.upper(),)
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            return {
+                "found":   False,
+                "problem": "No voter found with this student number",
+                "tried":   data.student_number.upper(),
+            }
+
+        # Step 2: Does the password match?
+        password_ok = verify_password(data.password, user["password_hash"])
+
+        return {
+            "found":          True,
+            "student_number": user["student_number"],
+            "full_name":      user["full_name"],
+            "role":           user["role"],
+            "is_active":      user["is_active"],
+            "password_match": password_ok,
+            "hash_preview":   user["password_hash"][:20] + "...",
+            "problem": (
+                None if password_ok
+                else "Password does not match stored hash — regenerate hash"
+            ),
+        }
+    finally:
+        cursor.close()
+        conn.close()
