@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -174,6 +175,14 @@ export default function LoginPage() {
             </div>
           )}
         </div>
+                  {/* Verify vote link — no login needed */}
+                  <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+            <Link
+              to="/verify"
+              className="text-brand text-sm hover:underline transition-colors">
+              🔐 Verify your vote receipt
+            </Link>
+          </div>
       </div>
     </div>
   );
