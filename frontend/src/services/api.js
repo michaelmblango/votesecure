@@ -1,0 +1,76 @@
+// frontend/src/services/api.js
+// Central place for ALL API calls to the backend
+// If the backend URL ever changes, update ONE line here
+
+import axios from "axios";
+
+const API_BASE = "http://localhost:8000/api";
+
+// Axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Interceptor: attach JWT token to every request automatically
+// The token is stored in localStorage after login
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("vs_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Interceptor: if any request returns 401, clear token and reload
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("vs_token");
+      localStorage.removeItem("vs_user");
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ── Auth ─────────────────────────────────────────────────────
+export const authAPI = {
+  login:     (student_number, password) =>
+               api.post("/auth/login", { student_number, password }),
+  verifyOTP: (user_id, otp_code) =>
+               api.post("/auth/login/otp", { user_id, otp_code }),
+  me:        ()        => api.get("/auth/me"),
+  logout:    ()        => api.post("/auth/logout"),
+  register:  (data)    => api.post("/auth/register", data),
+};
+
+// ── Elections ────────────────────────────────────────────────
+export const electionsAPI = {
+  list:             ()            => api.get("/elections"),
+  get:              (id)          => api.get(`/elections/${id}`),
+  create:           (data)        => api.post("/elections", data),
+  updateStatus:     (id, status)  => api.patch(`/elections/${id}/status`, { status }),
+  addPosition:      (id, data)    => api.post(`/elections/${id}/positions`, data),
+  deletePosition:   (id, posId)   => api.delete(`/elections/${id}/positions/${posId}`),
+  addCandidate:     (id, posId, data) =>
+                      api.post(`/elections/${id}/positions/${posId}/candidates`, data),
+  approveCandidate: (id, candId, approval_status) =>
+                      api.patch(`/elections/${id}/candidates/${candId}/status`, { approval_status }),
+  listCandidates:   (id)          => api.get(`/elections/${id}/candidates`),
+};
+
+// ── Votes ────────────────────────────────────────────────────
+export const votesAPI = {
+  cast:        (election_id, position_id, candidate_id) =>
+                 api.post("/votes/cast", { election_id, position_id, candidate_id }),
+  getStatus:   (election_id) => api.get(`/votes/status/${election_id}`),
+  verify:      (hash)        => api.get(`/votes/verify/${hash}`),
+};
+
+// ── Analytics ────────────────────────────────────────────────
+export const analyticsAPI = {
+  results:   (election_id) => api.get(`/analytics/results/${election_id}`),
+  turnout:   (election_id) => api.get(`/analytics/turnout/${election_id}`),
+  auditLogs: (limit = 50)  => api.get(`/analytics/audit-logs?limit=${limit}`),
+};
