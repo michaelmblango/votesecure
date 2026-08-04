@@ -1,9 +1,554 @@
 # backend/routers/elections.py
-from fastapi import APIRouter
+# ============================================================
+# Election management endpoints — admin only
+#
+# Elections
+# GET    /api/elections                 — List all elections
+# GET    /api/elections/{id}            — Get one election (full detail)
+# POST   /api/elections                 — Create election (admin)
+# PATCH  /api/elections/{id}/status     — Open/close election (admin)
+# DELETE /api/elections/{id}            — Archive election (admin)
+#
+# Positions
+# POST   /api/elections/{id}/positions          — Add position
+# DELETE /api/elections/{id}/positions/{pos_id} — Remove position
+#
+# Candidates
+# POST   /api/elections/{id}/positions/{pos_id}/candidates
+#        — Register candidate for a position
+# PATCH  /api/elections/{id}/candidates/{cand_id}/status
+#        — Approve or reject a candidate
+# GET    /api/elections/{id}/candidates
+#        — List all candidates in an election
+# ============================================================
+
+from fastapi import APIRouter, HTTPException, status, Depends
+from database import get_connection
+from models.election import (
+    ElectionCreate, ElectionUpdate, ElectionStatusUpdate,
+    PositionCreate, CandidateCreate, CandidateStatusUpdate,
+)
+from dependencies import get_current_user, require_admin
+
 router = APIRouter()
 
-# Endpoints coming soon:
-# GET  /api/elections
-# GET  /api/elections/{id}
-# POST /api/elections        (admin only)
-# PUT  /api/elections/{id}   (admin only)
+
+# ════════════════════════════════════════════════════════════
+# HELPER — fetch election or raise 404
+# ════════════════════════════════════════════════════════════
+def get_election_or_404(cursor, election_id: str) -> dict:
+    cursor.execute(
+        "SELECT * FROM elections WHERE election_id = %s",
+        (election_id,)
+    )
+    election = cursor.fetchone()
+    if not election:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Election not found.",
+        )
+    return dict(election)
+
+
+# ════════════════════════════════════════════════════════════
+# LIST ELECTIONS
+# Voters see only active elections they are eligible for.
+# Admins see all elections regardless of status.
+# ════════════════════════════════════════════════════════════
+@router.get("")
+def list_elections(current_user: dict = Depends(get_current_user)):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        role = current_user.get("role", "voter")
+
+        if role in ("system_admin", "election_admin", "auditor"):
+            # Admins see every election
+            cursor.execute(
+                """
+                SELECT e.*,
+                       u.full_name AS created_by_name,
+                       COUNT(DISTINCT p.position_id) AS total_positions,
+                       COUNT(DISTINCT v.vote_id)     AS total_votes_cast
+                FROM elections e
+                LEFT JOIN users     u ON e.created_by    = u.user_id
+                LEFT JOIN positions p ON e.election_id   = p.election_id
+                LEFT JOIN votes     v ON e.election_id   = v.election_id
+                GROUP BY e.election_id, u.full_name
+                ORDER BY e.created_at DESC
+                """
+            )
+        else:
+            # Voters see only active elections
+            cursor.execute(
+                """
+                SELECT e.*,
+                       COUNT(DISTINCT p.position_id) AS total_positions
+                FROM elections e
+                LEFT JOIN positions p ON e.election_id = p.election_id
+                WHERE e.status = 'active'
+                GROUP BY e.election_id
+                ORDER BY e.start_time ASC
+                """
+            )
+
+        elections = cursor.fetchall()
+        return {"elections": [dict(e) for e in elections]}
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# GET ONE ELECTION — full detail with positions and candidates
+# ════════════════════════════════════════════════════════════
+@router.get("/{election_id}")
+def get_election(
+    election_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        election = get_election_or_404(cursor, election_id)
+
+        # Fetch positions for this election
+        cursor.execute(
+            """
+            SELECT * FROM positions
+            WHERE election_id = %s
+            ORDER BY display_order ASC
+            """,
+            (election_id,)
+        )
+        positions = cursor.fetchall()
+
+        # Fetch approved candidates for each position
+        result_positions = []
+        for pos in positions:
+            pos_id = str(pos["position_id"])
+            cursor.execute(
+                """
+                SELECT c.*,
+                       COUNT(v.vote_id) AS vote_count
+                FROM candidates c
+                LEFT JOIN votes v ON c.candidate_id = v.candidate_id
+                WHERE c.position_id = %s
+                  AND c.approval_status = 'approved'
+                GROUP BY c.candidate_id
+                ORDER BY c.display_order ASC
+                """,
+                (pos_id,)
+            )
+            candidates = cursor.fetchall()
+            pos_dict = dict(pos)
+            pos_dict["candidates"] = [dict(c) for c in candidates]
+            result_positions.append(pos_dict)
+
+        election["positions"] = result_positions
+        return election
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# CREATE ELECTION — admin only
+# ════════════════════════════════════════════════════════════
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_election(
+    data: ElectionCreate,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO elections
+                (title, description, election_type, start_time, end_time,
+                 eligible_group, is_public_results, created_by, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'draft')
+            RETURNING *
+            """,
+            (
+                data.title,
+                data.description,
+                data.election_type,
+                data.start_time,
+                data.end_time,
+                data.eligible_group,
+                data.is_public_results,
+                current_user["sub"],
+            )
+        )
+        new_election = cursor.fetchone()
+
+        # Log it
+        cursor.execute(
+            """
+            INSERT INTO audit_logs
+                (actor_id, actor_type, event_type, event_description)
+            VALUES (%s, 'admin', 'ELECTION_CREATED', %s)
+            """,
+            (current_user["sub"], f"Election created: {data.title}")
+        )
+        conn.commit()
+
+        return {
+            "message":  "Election created successfully.",
+            "election": dict(new_election),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create election: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# UPDATE ELECTION STATUS — open, close, archive
+# Lifecycle: draft → active → closed → archived
+# ════════════════════════════════════════════════════════════
+@router.patch("/{election_id}/status")
+def update_election_status(
+    election_id: str,
+    data: ElectionStatusUpdate,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        election = get_election_or_404(cursor, election_id)
+        old_status = election["status"]
+
+        # Enforce valid transitions
+        valid_transitions = {
+            "draft":    ["active"],
+            "active":   ["closed"],
+            "closed":   ["archived"],
+            "archived": [],
+        }
+        if data.status not in valid_transitions.get(old_status, []):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Cannot move election from '{old_status}' to '{data.status}'. "
+                    f"Valid next status: {valid_transitions[old_status]}"
+                ),
+            )
+
+        cursor.execute(
+            """
+            UPDATE elections
+            SET status = %s, updated_at = NOW()
+            WHERE election_id = %s
+            RETURNING *
+            """,
+            (data.status, election_id)
+        )
+        updated = cursor.fetchone()
+
+        # Map status to readable event name
+        event_map = {
+            "active":   "ELECTION_OPENED",
+            "closed":   "ELECTION_CLOSED",
+            "archived": "ELECTION_ARCHIVED",
+        }
+        cursor.execute(
+            """
+            INSERT INTO audit_logs
+                (actor_id, actor_type, event_type, event_description)
+            VALUES (%s, 'admin', %s, %s)
+            """,
+            (
+                current_user["sub"],
+                event_map.get(data.status, "ELECTION_UPDATED"),
+                f"Election '{election['title']}' status → {data.status}",
+            )
+        )
+        conn.commit()
+
+        return {
+            "message":  f"Election status updated to '{data.status}'.",
+            "election": dict(updated),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# ADD POSITION TO ELECTION
+# ════════════════════════════════════════════════════════════
+@router.post("/{election_id}/positions", status_code=status.HTTP_201_CREATED)
+def add_position(
+    election_id: str,
+    data: PositionCreate,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        election = get_election_or_404(cursor, election_id)
+
+        # Can only add positions while election is in draft
+        if election["status"] != "draft":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Positions can only be added while the election is in draft status.",
+            )
+
+        cursor.execute(
+            """
+            INSERT INTO positions
+                (election_id, position_name, description,
+                 max_votes, display_order)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING *
+            """,
+            (
+                election_id,
+                data.position_name,
+                data.description,
+                data.max_votes,
+                data.display_order,
+            )
+        )
+        new_position = cursor.fetchone()
+
+        cursor.execute(
+            """
+            INSERT INTO audit_logs
+                (actor_id, actor_type, event_type, event_description)
+            VALUES (%s, 'admin', 'POSITION_ADDED', %s)
+            """,
+            (
+                current_user["sub"],
+                f"Position '{data.position_name}' added to '{election['title']}'",
+            )
+        )
+        conn.commit()
+
+        return {
+            "message":  "Position added successfully.",
+            "position": dict(new_position),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# DELETE POSITION
+# ════════════════════════════════════════════════════════════
+@router.delete("/{election_id}/positions/{position_id}")
+def delete_position(
+    election_id: str,
+    position_id: str,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        election = get_election_or_404(cursor, election_id)
+
+        if election["status"] != "draft":
+            raise HTTPException(
+                status_code=400,
+                detail="Positions can only be removed from draft elections.",
+            )
+
+        cursor.execute(
+            "DELETE FROM positions WHERE position_id = %s AND election_id = %s RETURNING position_name",
+            (position_id, election_id)
+        )
+        deleted = cursor.fetchone()
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Position not found.")
+
+        conn.commit()
+        return {"message": f"Position '{deleted['position_name']}' removed."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# REGISTER CANDIDATE FOR A POSITION
+# ════════════════════════════════════════════════════════════
+@router.post(
+    "/{election_id}/positions/{position_id}/candidates",
+    status_code=status.HTTP_201_CREATED,
+)
+def add_candidate(
+    election_id: str,
+    position_id: str,
+    data: CandidateCreate,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Verify position belongs to this election
+        cursor.execute(
+            "SELECT * FROM positions WHERE position_id = %s AND election_id = %s",
+            (position_id, election_id)
+        )
+        position = cursor.fetchone()
+        if not position:
+            raise HTTPException(status_code=404, detail="Position not found in this election.")
+
+        cursor.execute(
+            """
+            INSERT INTO candidates
+                (position_id, display_name, manifesto,
+                 photo_url, display_order, approval_status)
+            VALUES (%s, %s, %s, %s, %s, 'pending')
+            RETURNING *
+            """,
+            (
+                position_id,
+                data.display_name,
+                data.manifesto,
+                data.photo_url,
+                data.display_order,
+            )
+        )
+        new_candidate = cursor.fetchone()
+
+        cursor.execute(
+            """
+            INSERT INTO audit_logs
+                (actor_id, actor_type, event_type, event_description)
+            VALUES (%s, 'admin', 'CANDIDATE_REGISTERED', %s)
+            """,
+            (
+                current_user["sub"],
+                f"Candidate '{data.display_name}' registered for '{position['position_name']}'",
+            )
+        )
+        conn.commit()
+
+        return {
+            "message":   "Candidate registered. Pending approval.",
+            "candidate": dict(new_candidate),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# APPROVE OR REJECT A CANDIDATE
+# ════════════════════════════════════════════════════════════
+@router.patch("/{election_id}/candidates/{candidate_id}/status")
+def update_candidate_status(
+    election_id: str,
+    candidate_id: str,
+    data: CandidateStatusUpdate,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE candidates
+            SET approval_status = %s,
+                approved_by     = %s,
+                approved_at     = NOW()
+            WHERE candidate_id = %s
+            RETURNING *
+            """,
+            (data.approval_status, current_user["sub"], candidate_id)
+        )
+        updated = cursor.fetchone()
+        if not updated:
+            raise HTTPException(status_code=404, detail="Candidate not found.")
+
+        cursor.execute(
+            """
+            INSERT INTO audit_logs
+                (actor_id, actor_type, event_type, event_description)
+            VALUES (%s, 'admin', 'CANDIDATE_STATUS_UPDATED', %s)
+            """,
+            (
+                current_user["sub"],
+                f"Candidate '{updated['display_name']}' → {data.approval_status}",
+            )
+        )
+        conn.commit()
+
+        return {
+            "message":   f"Candidate {data.approval_status}.",
+            "candidate": dict(updated),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# LIST ALL CANDIDATES IN AN ELECTION (admin view — all statuses)
+# ════════════════════════════════════════════════════════════
+@router.get("/{election_id}/candidates")
+def list_candidates(
+    election_id: str,
+    current_user: dict = Depends(require_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT c.*, p.position_name
+            FROM candidates c
+            JOIN positions  p ON c.position_id = p.position_id
+            WHERE p.election_id = %s
+            ORDER BY p.display_order ASC, c.display_order ASC
+            """,
+            (election_id,)
+        )
+        candidates = cursor.fetchall()
+        return {"candidates": [dict(c) for c in candidates]}
+
+    finally:
+        cursor.close()
+        conn.close()
