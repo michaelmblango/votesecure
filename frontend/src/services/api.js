@@ -74,3 +74,19 @@ export const analyticsAPI = {
   turnout:   (election_id) => api.get(`/analytics/turnout/${election_id}`),
   auditLogs: (limit = 50)  => api.get(`/analytics/audit-logs?limit=${limit}`),
 };
+
+export const orgAPI = {
+  signup:    (data)         => api.post("/org/signup", data),
+  join:      (code, data)   => api.post(`/org/join/${code}`, data),
+  login:     (data)         => api.post("/org/login", data),
+  loginOtp:  (data)         => api.post("/org/login/otp", data),
+  me:        ()             => api.get("/org/me"),
+  plans:     ()             => api.get("/org/plans"),
+};
+
+export const licenceAPI = {
+  plans:          ()     => api.get("/licences/plans"),
+  requestLicence: (data) => api.post("/licences/request", data),
+  activate:       (data) => api.post("/licences/activate", data),
+  myLicences:     ()     => api.get("/licences/my-licences"),
+};

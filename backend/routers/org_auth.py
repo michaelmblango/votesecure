@@ -33,22 +33,32 @@ def slugify(name: str) -> str:
     return slug[:80].strip("-")
 
 
-def make_admin_token(org_admin_id: str, org_id: str, is_owner: bool) -> str:
+def make_admin_token(org_admin_id: str, org_id: str, is_owner: bool,
+                     linked_user_id: str = None) -> str:
     payload = {
-        "sub":   org_admin_id,
-        "org":   org_id,
-        "owner": is_owner,
-        "type":  "org_admin",
-        "exp":   datetime.utcnow() + timedelta(minutes=60),
-        "iat":   datetime.utcnow(),
+        "sub":             org_admin_id,
+        "user_id":         linked_user_id or org_admin_id,
+        "org":             org_id,
+        "owner":           is_owner,
+        "type":            "org_admin",
+        "role":            "election_admin",
+        "exp":             datetime.utcnow() + timedelta(minutes=60),
+        "iat":             datetime.utcnow(),
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
-        payload = jwt.decode(credentials.credentials, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        if payload.get("type") != "org_admin":
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM]
+        )
+        # Accept both org_admin tokens and legacy admin tokens
+        token_type = payload.get("type", "")
+        role       = payload.get("role", "")
+        if token_type not in ("org_admin",) and role not in ("election_admin", "system_admin"):
             raise HTTPException(status_code=401, detail="Invalid token type.")
         return payload
     except JWTError:
@@ -121,9 +131,30 @@ def org_signup(data: OrgSignup):
         )
         org_id = str(cursor.fetchone()["org_id"])
 
+        # Create a corresponding users row so elections.created_by FK works
         cursor.execute(
-            "INSERT INTO org_admins (org_id, username, email, password_hash, full_name, is_owner) VALUES (%s,%s,%s,%s,%s,TRUE) RETURNING org_admin_id",
-            (org_id, data.username, data.email, password_hash, data.full_name)
+            """
+            INSERT INTO users (full_name, email, password_hash, role)
+            VALUES (%s, %s, %s, 'election_admin')
+            ON CONFLICT (email) DO UPDATE
+                SET role = 'election_admin'
+            RETURNING user_id
+            """,
+            (data.full_name, data.email, password_hash)
+        )
+        users_row   = cursor.fetchone()
+        linked_user_id = str(users_row["user_id"])
+
+        cursor.execute(
+            """
+            INSERT INTO org_admins
+                (org_id, username, email, password_hash, full_name,
+                 is_owner, linked_user_id)
+            VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+            RETURNING org_admin_id
+            """,
+            (org_id, data.username, data.email, password_hash,
+             data.full_name, linked_user_id)
         )
         conn.commit()
 
@@ -153,7 +184,31 @@ def admin_join(invite_code: str, data: AdminJoin):
         if cursor.fetchone(): raise HTTPException(409, "Email already registered.")
 
         password_hash = hash_password(data.password)
-        cursor.execute("INSERT INTO org_admins (org_id, username, email, password_hash, full_name, is_owner) VALUES (%s,%s,%s,%s,%s,FALSE)", (org_id, data.username, data.email, password_hash, data.full_name))
+
+        # Create matching users row
+        cursor.execute(
+            """
+            INSERT INTO users (full_name, email, password_hash, role)
+            VALUES (%s, %s, %s, 'election_admin')
+            ON CONFLICT (email) DO UPDATE
+                SET role = 'election_admin'
+            RETURNING user_id
+            """,
+            (data.full_name, data.email, password_hash)
+        )
+        linked_user_id = str(cursor.fetchone()["user_id"])
+
+        cursor.execute(
+            """
+            INSERT INTO org_admins
+                (org_id, username, email, password_hash, full_name,
+                 is_owner, linked_user_id)
+            VALUES (%s, %s, %s, %s, %s, FALSE, %s)
+            RETURNING org_admin_id
+            """,
+            (org_id, data.username, data.email, password_hash,
+             data.full_name, linked_user_id)
+        )
         conn.commit()
 
         cursor.execute("SELECT COUNT(*) AS cnt FROM org_admins WHERE org_id=%s AND is_active=TRUE", (org_id,))
@@ -216,8 +271,13 @@ def admin_login_otp(data: OTPVerify):
         cursor.execute("UPDATE org_admin_otp SET is_used=TRUE WHERE otp_id=%s", (str(otp_row["otp_id"]),))
 
         cursor.execute(
-            """SELECT a.org_admin_id, a.full_name, a.username, a.email, a.is_owner, a.org_id, o.org_name
-               FROM org_admins a JOIN organisations o ON a.org_id=o.org_id WHERE a.org_admin_id=%s""",
+            """
+            SELECT a.org_admin_id, a.full_name, a.username, a.email,
+                   a.is_owner, a.org_id, a.linked_user_id, o.org_name
+            FROM org_admins a
+            JOIN organisations o ON a.org_id = o.org_id
+            WHERE a.org_admin_id=%s
+            """,
             (data.org_admin_id,)
         )
         admin = cursor.fetchone()
@@ -226,7 +286,12 @@ def admin_login_otp(data: OTPVerify):
         cursor.execute("UPDATE org_admins SET last_login=NOW() WHERE org_admin_id=%s", (str(admin["org_admin_id"]),))
         conn.commit()
 
-        token = make_admin_token(str(admin["org_admin_id"]), str(admin["org_id"]), admin["is_owner"])
+        token = make_admin_token(
+            org_admin_id=str(admin["org_admin_id"]),
+            org_id=str(admin["org_id"]),
+            is_owner=admin["is_owner"],
+            linked_user_id=str(admin["linked_user_id"]) if admin["linked_user_id"] else None,
+        )
         return {"status": "authenticated", "access_token": token, "token_type": "bearer", "org_admin_id": str(admin["org_admin_id"]), "org_id": str(admin["org_id"]), "org_name": admin["org_name"], "full_name": admin["full_name"], "username": admin["username"], "is_owner": admin["is_owner"]}
     except HTTPException: raise
     except Exception as e: conn.rollback(); raise HTTPException(500, str(e))

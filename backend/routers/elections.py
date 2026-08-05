@@ -169,8 +169,9 @@ def create_election(
             """
             INSERT INTO elections
                 (title, description, election_type, start_time, end_time,
-                 eligible_group, is_public_results, created_by, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'draft')
+                 eligible_group, is_public_results, created_by, status,
+                 max_voters, plan_name, licence_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'draft', %s, %s, %s)
             RETURNING *
             """,
             (
@@ -181,10 +182,28 @@ def create_election(
                 data.end_time,
                 data.eligible_group,
                 data.is_public_results,
-                current_user["sub"],
+                current_user.get("user_id") or current_user["sub"],
+                data.max_voters or 10,
+                data.plan_name  or "free",
+                data.licence_id,
             )
         )
         new_election = cursor.fetchone()
+
+        # Mark licence as used if provided
+        if data.licence_id:
+            election_id = str(new_election["election_id"])
+            cursor.execute(
+                """
+                UPDATE election_licences
+                SET status   = 'used',
+                    used_by  = %s,
+                    used_at  = NOW(),
+                    election_id = %s
+                WHERE licence_id = %s
+                """,
+                (current_user["sub"], election_id, data.licence_id)
+            )
 
         # Log it
         cursor.execute(

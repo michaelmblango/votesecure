@@ -17,6 +17,9 @@ class ElectionCreate(BaseModel):
     end_time:          datetime
     eligible_group:    Optional[str]            # None = all voters eligible
     is_public_results: bool = False
+    max_voters:        Optional[int]  = 10
+    plan_name:         Optional[str]  = "free"
+    licence_id:        Optional[str]  = None
 
     @validator("election_type")
     def valid_type(cls, v):
