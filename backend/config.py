@@ -47,6 +47,7 @@ class Settings:
     BREVO_SMTP_PORT: int        = int(os.getenv("BREVO_SMTP_PORT", "587"))
     BREVO_SMTP_LOGIN: str       = os.getenv("BREVO_SMTP_LOGIN", "")
     BREVO_SMTP_PASSWORD: str    = os.getenv("BREVO_SMTP_PASSWORD", "")
+    BREVO_API_KEY: str          = os.getenv("BREVO_API_KEY", "")
     EMAIL_FROM_ADDRESS: str     = os.getenv("EMAIL_FROM_ADDRESS", "votesecure.online@gmail.com")
     EMAIL_FROM_NAME: str        = os.getenv("EMAIL_FROM_NAME", "VoteSecure")
     PLATFORM_URL: str           = os.getenv("PLATFORM_URL", "http://localhost:3000")

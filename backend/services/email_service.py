@@ -347,3 +347,8 @@ Use this code in the admin dashboard to activate your election.
     """)
 
     return _send(email, name, subject, html_body, text_body)
+
+
+def send_voter_otp(email: str, name: str, otp_code: str) -> bool:
+    """Alias for send_otp_email — used by auth routers."""
+    return send_otp_email(email, name, otp_code)
