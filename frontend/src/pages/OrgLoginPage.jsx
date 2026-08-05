@@ -18,7 +18,7 @@ export default function OrgLoginPage() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/org/login", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/org/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -37,7 +37,7 @@ export default function OrgLoginPage() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/org/login/otp", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/org/login/otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ org_admin_id: adminId, otp_code: otpCode }),

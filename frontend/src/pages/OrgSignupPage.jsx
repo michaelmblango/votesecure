@@ -16,7 +16,7 @@ export default function OrgSignupPage() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/org/signup", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/org/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

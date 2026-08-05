@@ -18,7 +18,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/org/plans")
+    fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/org/plans`)
       .then(r => r.json())
       .then(d => setPlans(d.plans || []))
       .catch(() => {})
