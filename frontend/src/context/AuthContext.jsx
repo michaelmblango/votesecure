@@ -1,5 +1,5 @@
 // frontend/src/context/AuthContext.jsx
-// Global auth state — available to every component in the app
+// Global auth state - available to every component in the app
 // Stores: current user, login function, logout function
 
 import { createContext, useContext, useState, useEffect } from "react";
@@ -49,5 +49,5 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Custom hook — any component calls: const { user, logout } = useAuth();
+// Custom hook - any component calls: const { user, logout } = useAuth();
 export const useAuth = () => useContext(AuthContext);

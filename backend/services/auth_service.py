@@ -58,7 +58,7 @@ def verify_password(plain_password: str, stored_hash: str) -> bool:
     submitted password with that same salt, and compares.
 
     Returns True if they match, False otherwise.
-    Never raises an exception — always returns bool.
+    Never raises an exception - always returns bool.
     """
     try:
         return bcrypt.checkpw(
@@ -125,7 +125,7 @@ def verify_access_token(token: str) -> dict:
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token — no subject",
+                detail="Invalid token - no subject",
             )
         return payload
     except JWTError:
@@ -145,7 +145,7 @@ def generate_otp(user_id: str) -> str:
 
     Redis key:  otp:{user_id}
     Redis value: the 6-digit code
-    TTL (expiry): 10 minutes — auto-deleted by Redis after that
+    TTL (expiry): 10 minutes - auto-deleted by Redis after that
 
     Returns the OTP code (so we can email it to the voter).
     """
@@ -178,7 +178,7 @@ def verify_otp(user_id: str, submitted_code: str) -> bool:
         return False
 
     if stored_code == submitted_code:
-        # Delete immediately after successful use — one-time only
+        # Delete immediately after successful use - one-time only
         redis_client.delete(f"otp:{user_id}")
         return True
 
@@ -198,7 +198,7 @@ def record_failed_attempt(student_number: str) -> int:
     key = f"login_attempts:{student_number}"
     attempts = redis_client.incr(key)  # Increment by 1 (creates if not exists)
     if attempts == 1:
-        # First failure — set 15-minute expiry window
+        # First failure - set 15-minute expiry window
         redis_client.expire(key, settings.LOCKOUT_MINUTES * 60)
     return attempts
 

@@ -1,188 +1,176 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate  = useNavigate();
-
-  // Which step we're on: 1 = password, 2 = OTP
-  const [step, setStep]               = useState(1);
+  const [step, setStep]             = useState(1);
   const [studentNumber, setStudentNumber] = useState("");
-  const [password, setPassword]       = useState("");
-  const [otpCode, setOtpCode]         = useState("");
-  const [userId, setUserId]           = useState("");
-  const [error, setError]             = useState("");
-  const [loading, setLoading]         = useState(false);
-  const [otpMessage, setOtpMessage]   = useState("");
+  const [password, setPassword]     = useState("");
+  const [otpCode, setOtpCode]       = useState("");
+  const [userId, setUserId]         = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
 
-  // ── Step 1: Password ────────────────────────────────────
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError(""); setLoading(true);
     try {
       const res = await authAPI.login(studentNumber, password);
       setUserId(res.data.user_id);
       setOtpMessage(res.data.message);
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.detail || "Login failed. Check your credentials.");
+    } finally { setLoading(false); }
   };
 
-  // ── Step 2: OTP ─────────────────────────────────────────
   const handleOTPSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError(""); setLoading(true);
     try {
       const res = await authAPI.verifyOTP(userId, otpCode);
       const { access_token, user_id, full_name, role } = res.data;
-
-      // Store token and user in context + localStorage
       login(access_token, { user_id, full_name, role });
-
-      // Redirect based on role
-      if (role === "voter") {
-        navigate("/ballot");
-      } else {
-        navigate("/admin");
-      }
+      navigate(role === "voter" ? "/ballot" : "/admin");
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy to-brand
-                    flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, var(--navy) 0%, #1251A3 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1.5rem",
+    }}>
+      <div style={{ width: "100%", maxWidth: 440 }}>
 
-        {/* Header */}
-        <div className="bg-navy px-8 py-6 text-center">
-          <span className="text-4xl">🗳️</span>
-          <h1 className="text-white font-bold text-2xl mt-2">VoteSecure</h1>
-          <p className="text-blue-300 text-sm">AI Professional College</p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="flex">
-          <div className={`h-1 flex-1 transition-colors duration-500
-                          ${step >= 1 ? "bg-brand" : "bg-gray-200"}`} />
-          <div className={`h-1 flex-1 transition-colors duration-500
-                          ${step >= 2 ? "bg-brand" : "bg-gray-200"}`} />
-        </div>
-
-        <div className="px-8 py-8">
-          <p className="text-center text-sm text-gray-400 mb-6">
-            Step {step} of 2 — {step === 1 ? "Identity Verification" : "Email Verification"}
-          </p>
-
-          {/* ── STEP 1: Password ── */}
-          {step === 1 && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Student Registration Number
-                </label>
-                <input
-                  type="text"
-                  value={studentNumber}
-                  onChange={(e) => setStudentNumber(e.target.value)}
-                  placeholder="e.g. CS/2021/001"
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3
-                             focus:outline-none focus:ring-2 focus:ring-brand text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3
-                             focus:outline-none focus:ring-2 focus:ring-brand text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-brand hover:bg-blue-700 text-white font-semibold
-                           py-3 rounded-lg transition-colors disabled:opacity-60 mt-2">
-                {loading ? "Verifying..." : "Continue →"}
-              </button>
-            </form>
-          )}
-
-          {/* ── STEP 2: OTP ── */}
-          {step === 2 && (
-            <form onSubmit={handleOTPSubmit} className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <p className="text-blue-800 text-sm">{otpMessage}</p>
-                <p className="text-blue-600 text-xs mt-1">
-                  Check your terminal if running in development mode
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  6-Digit Verification Code
-                </label>
-                <input
-                  type="text"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/, ""))}
-                  placeholder="000000"
-                  maxLength={6}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-4 py-4
-                             text-center text-3xl tracking-[0.5em] font-mono
-                             focus:outline-none focus:ring-2 focus:ring-brand"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading || otpCode.length !== 6}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold
-                           py-3 rounded-lg transition-colors disabled:opacity-60">
-                {loading ? "Verifying..." : "Verify & Login"}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStep(1); setError(""); setOtpCode(""); }}
-                className="w-full text-gray-500 text-sm hover:text-gray-700 underline">
-                ← Back to password
-              </button>
-            </form>
-          )}
-
-          {/* Error message */}
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700
-                            text-sm rounded-lg px-4 py-3">
-              ⚠️ {error}
-            </div>
-          )}
-        </div>
-                  {/* Verify vote link — no login needed */}
-                  <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-            <Link
-              to="/verify"
-              className="text-brand text-sm hover:underline transition-colors">
-              🔐 Verify your vote receipt
-            </Link>
+        {/* Logo above card */}
+        <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+          <div style={{
+            width: 52, height: 52, background: "rgba(255,255,255,0.12)",
+            borderRadius: 14, display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: 24, margin: "0 auto 0.75rem",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}>🗳️</div>
+          <div style={{ color: "#fff", fontSize: "1.375rem", fontWeight: 800, letterSpacing: "-0.01em" }}>
+            VoteSecure
           </div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.8125rem", marginTop: 2 }}>
+            AI Professional College
+          </div>
+        </div>
+
+        {/* Card */}
+        <div className="card animate-in" style={{ borderRadius: 16, overflow: "hidden" }}>
+
+          {/* Step indicator */}
+          <div style={{ padding: "1.25rem 1.75rem 0" }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: "1.25rem" }}>
+              {[1, 2].map(n => (
+                <div key={n} style={{
+                  flex: 1, height: 3, borderRadius: 999,
+                  background: step >= n ? "var(--blue)" : "var(--border)",
+                  transition: "background 0.3s",
+                }} />
+              ))}
+            </div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Step {step} of 2 - {step === 1 ? "Identity Verification" : "Email Confirmation"}
+            </div>
+          </div>
+
+          <div style={{ padding: "1.25rem 1.75rem 1.75rem" }}>
+
+            {/* STEP 1 */}
+            {step === 1 && (
+              <form onSubmit={handlePasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div>
+                  <label className="input-label">Student Registration Number</label>
+                  <input
+                    className="input"
+                    value={studentNumber}
+                    onChange={e => setStudentNumber(e.target.value)}
+                    placeholder="e.g. CS/2021/001"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Password</label>
+                  <input
+                    className="input"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem" }}>
+                  {loading ? <><span className="spinner-sm" style={{ borderTopColor: "#fff" }} /> Verifying...</> : "Continue →"}
+                </button>
+              </form>
+            )}
+
+            {/* STEP 2 */}
+            {step === 2 && (
+              <form onSubmit={handleOTPSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div className="alert alert-info" style={{ borderRadius: 8 }}>
+                  <span style={{ fontSize: "1rem" }}>📧</span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Check your email</div>
+                    <div style={{ fontSize: "0.8125rem", opacity: 0.85 }}>{otpMessage}</div>
+                  </div>
+                </div>
+                <div>
+                  <label className="input-label">6-Digit Verification Code</label>
+                  <input
+                    className="input text-mono"
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000"
+                    maxLength={6}
+                    required
+                    style={{ textAlign: "center", fontSize: "2rem", letterSpacing: "0.4em", padding: "0.875rem" }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length !== 6}
+                  className="btn btn-success btn-lg">
+                  {loading ? <><span className="spinner-sm" style={{ borderTopColor: "#fff" }} /> Verifying...</> : "Confirm & Sign In"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setError(""); setOtpCode(""); }}
+                  className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem" }}>
+                  ← Back
+                </button>
+              </form>
+            )}
+
+            {error && (
+              <div className="alert alert-error animate-in" style={{ marginTop: "1rem", borderRadius: 8 }}>
+                <span>⚠</span> {error}
+              </div>
+            )}
+
+            {/* Verify link */}
+            <div className="divider" style={{ margin: "1.25rem 0 0.75rem" }} />
+            <div style={{ textAlign: "center" }}>
+              <Link to="/verify" style={{ fontSize: "0.8125rem", color: "var(--slate)", textDecoration: "none" }}
+                onMouseEnter={e => e.target.style.color = "var(--blue)"}
+                onMouseLeave={e => e.target.style.color = "var(--slate)"}>
+                🔐 Verify a vote receipt
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

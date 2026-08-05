@@ -2,9 +2,9 @@
 # ============================================================
 # Voting endpoints
 #
-# POST /api/votes/cast              — Cast a vote (voter)
-# GET  /api/votes/status/{election} — Check if voter has voted
-# GET  /api/votes/verify/{hash}     — Public vote verification
+# POST /api/votes/cast              - Cast a vote (voter)
+# GET  /api/votes/status/{election} - Check if voter has voted
+# GET  /api/votes/verify/{hash}     - Public vote verification
 # ============================================================
 
 import hashlib
@@ -30,7 +30,7 @@ def make_vote_hash(vote_id: str, election_id: str,
     """
     Create a SHA-256 fingerprint of a vote.
     If anyone changes candidate_id in the database later,
-    the hash will no longer match — tampering detected.
+    the hash will no longer match - tampering detected.
     """
     content = f"{vote_id}|{election_id}|{candidate_id}|{cast_at}"
     return hashlib.sha256(content.encode()).hexdigest()
@@ -50,14 +50,14 @@ def cast_vote(
     """
     Cast a vote for a candidate in a specific position.
 
-    Rules enforced (all server-side — cannot be bypassed):
+    Rules enforced (all server-side - cannot be bypassed):
     1. Election must be active and within its time window
     2. Voter must be eligible for this election
     3. Voter must not have already voted for this position
     4. Candidate must be approved and belong to this position
 
-    Records vote anonymously — no voter_id in votes table.
-    Records participation separately — no candidate_id there.
+    Records vote anonymously - no voter_id in votes table.
+    Records participation separately - no candidate_id there.
     """
     conn   = get_connection()
     cursor = conn.cursor()
@@ -148,7 +148,7 @@ def cast_vote(
                 detail="Invalid candidate. They may not be approved for this position.",
             )
 
-        # ══ ALL RULES PASSED — Record the vote ═══════════
+        # ══ ALL RULES PASSED - Record the vote ═══════════
 
         # Generate vote timestamp and hash
         cast_at   = datetime.utcnow().isoformat()
@@ -189,7 +189,7 @@ def cast_vote(
             (voter_id, data.election_id, data.position_id)
         )
 
-        # Audit log — records that vote was cast, NOT who for
+        # Audit log - records that vote was cast, NOT who for
         cursor.execute(
             """
             INSERT INTO audit_logs
@@ -265,13 +265,13 @@ def get_voting_status(
 
 
 # ════════════════════════════════════════════════════════════
-# VERIFY A VOTE — public endpoint, no auth required
+# VERIFY A VOTE - public endpoint, no auth required
 # Any voter can confirm their vote was counted
 # ════════════════════════════════════════════════════════════
 @router.get("/verify/{vote_hash}")
 def verify_vote(vote_hash: str):
     """
-    Public endpoint — no login required.
+    Public endpoint - no login required.
     Voter submits their vote_hash receipt and confirms
     their vote exists and has not been tampered with.
     Does NOT reveal who cast the vote.

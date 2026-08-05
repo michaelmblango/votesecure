@@ -2,9 +2,9 @@
 # ============================================================
 # Results and analytics endpoints
 #
-# GET /api/analytics/results/{election_id}  — Vote counts
-# GET /api/analytics/turnout/{election_id}  — Turnout stats
-# GET /api/analytics/audit-logs             — Audit trail (admin)
+# GET /api/analytics/results/{election_id}  - Vote counts
+# GET /api/analytics/turnout/{election_id}  - Turnout stats
+# GET /api/analytics/audit-logs             - Audit trail (admin)
 # ============================================================
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -189,7 +189,7 @@ def get_turnout(
 
 
 # ════════════════════════════════════════════════════════════
-# AUDIT LOG VIEWER — admin only
+# AUDIT LOG VIEWER - admin only
 # ════════════════════════════════════════════════════════════
 @router.get("/audit-logs")
 def get_audit_logs(

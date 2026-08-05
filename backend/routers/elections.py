@@ -1,25 +1,25 @@
 # backend/routers/elections.py
 # ============================================================
-# Election management endpoints — admin only
+# Election management endpoints - admin only
 #
 # Elections
-# GET    /api/elections                 — List all elections
-# GET    /api/elections/{id}            — Get one election (full detail)
-# POST   /api/elections                 — Create election (admin)
-# PATCH  /api/elections/{id}/status     — Open/close election (admin)
-# DELETE /api/elections/{id}            — Archive election (admin)
+# GET    /api/elections                 - List all elections
+# GET    /api/elections/{id}            - Get one election (full detail)
+# POST   /api/elections                 - Create election (admin)
+# PATCH  /api/elections/{id}/status     - Open/close election (admin)
+# DELETE /api/elections/{id}            - Archive election (admin)
 #
 # Positions
-# POST   /api/elections/{id}/positions          — Add position
-# DELETE /api/elections/{id}/positions/{pos_id} — Remove position
+# POST   /api/elections/{id}/positions          - Add position
+# DELETE /api/elections/{id}/positions/{pos_id} - Remove position
 #
 # Candidates
 # POST   /api/elections/{id}/positions/{pos_id}/candidates
-#        — Register candidate for a position
+#        - Register candidate for a position
 # PATCH  /api/elections/{id}/candidates/{cand_id}/status
-#        — Approve or reject a candidate
+#        - Approve or reject a candidate
 # GET    /api/elections/{id}/candidates
-#        — List all candidates in an election
+#        - List all candidates in an election
 # ============================================================
 
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -34,7 +34,7 @@ router = APIRouter()
 
 
 # ════════════════════════════════════════════════════════════
-# HELPER — fetch election or raise 404
+# HELPER - fetch election or raise 404
 # ════════════════════════════════════════════════════════════
 def get_election_or_404(cursor, election_id: str) -> dict:
     cursor.execute(
@@ -101,7 +101,7 @@ def list_elections(current_user: dict = Depends(get_current_user)):
 
 
 # ════════════════════════════════════════════════════════════
-# GET ONE ELECTION — full detail with positions and candidates
+# GET ONE ELECTION - full detail with positions and candidates
 # ════════════════════════════════════════════════════════════
 @router.get("/{election_id}")
 def get_election(
@@ -155,7 +155,7 @@ def get_election(
 
 
 # ════════════════════════════════════════════════════════════
-# CREATE ELECTION — admin only
+# CREATE ELECTION - admin only
 # ════════════════════════════════════════════════════════════
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_election(
@@ -213,7 +213,7 @@ def create_election(
 
 
 # ════════════════════════════════════════════════════════════
-# UPDATE ELECTION STATUS — open, close, archive
+# UPDATE ELECTION STATUS - open, close, archive
 # Lifecycle: draft → active → closed → archived
 # ════════════════════════════════════════════════════════════
 @router.patch("/{election_id}/status")
@@ -526,7 +526,7 @@ def update_candidate_status(
 
 
 # ════════════════════════════════════════════════════════════
-# LIST ALL CANDIDATES IN AN ELECTION (admin view — all statuses)
+# LIST ALL CANDIDATES IN AN ELECTION (admin view - all statuses)
 # ════════════════════════════════════════════════════════════
 @router.get("/{election_id}/candidates")
 def list_candidates(

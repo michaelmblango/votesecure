@@ -1,409 +1,189 @@
-// src/pages/ResultsPage.jsx
-// Election results with live vote counts, progress bars,
-// winner declaration, and turnout statistics
-
 import { useState, useEffect } from "react";
 import { electionsAPI, analyticsAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// ════════════════════════════════════════════════════════
-// CANDIDATE RESULT ROW
-// Shows candidate name, vote count, percentage bar, winner badge
-// ════════════════════════════════════════════════════════
-function CandidateResult({ candidate, isWinner, totalVotes }) {
+function CandidateResult({ candidate, isWinner }) {
   return (
-    <div className={`p-4 rounded-xl border-2 transition-all
-                     ${isWinner
-                       ? "border-yellow-400 bg-yellow-50"
-                       : "border-gray-100 bg-white"}`}>
-      <div className="flex items-center gap-3 mb-2">
-        {/* Avatar */}
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center
-                         font-bold text-base flex-shrink-0
-                         ${isWinner
-                           ? "bg-yellow-400 text-white"
-                           : "bg-gray-100 text-gray-500"}`}>
-          {candidate.candidate_name.charAt(0).toUpperCase()}
+    <div style={{
+      display:"flex", alignItems:"center", gap:"0.875rem", padding:"0.875rem",
+      borderRadius:10, border:`2px solid ${isWinner ? "var(--amber)" : "var(--border)"}`,
+      background: isWinner ? "var(--amber-lt)" : "#fff", marginBottom:"0.625rem",
+    }}>
+      <div style={{
+        width:40, height:40, borderRadius:"50%", flexShrink:0,
+        background: isWinner ? "var(--amber)" : "var(--ice)",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        fontWeight:800, color: isWinner ? "#fff" : "var(--slate)", fontSize:"1.125rem",
+      }}>
+        {candidate.candidate_name.charAt(0).toUpperCase()}
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+          <span style={{ fontWeight:700, color:"var(--ink)", fontSize:"0.9375rem" }}>{candidate.candidate_name}</span>
+          {isWinner && <span className="badge badge-amber">🏆 Leading</span>}
         </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold text-navy text-sm">
-              {candidate.candidate_name}
-            </p>
-            {isWinner && (
-              <span className="text-xs bg-yellow-400 text-yellow-900
-                               font-bold px-2 py-0.5 rounded-full">
-                🏆 WINNER
-              </span>
-            )}
+        <div style={{ marginTop:6 }}>
+          <div className="progress-track" style={{ height:5 }}>
+            <div style={{ height:"100%", width:`${candidate.percentage}%`, background: isWinner ? "var(--amber)" : "var(--blue)", borderRadius:999, transition:"width 0.7s" }} />
           </div>
-          <p className="text-gray-400 text-xs">
-            {candidate.vote_count} vote{candidate.vote_count !== 1 ? "s" : ""}
-          </p>
         </div>
-
-        <p className={`text-lg font-bold flex-shrink-0
-                       ${isWinner ? "text-yellow-600" : "text-gray-600"}`}>
-          {candidate.percentage}%
-        </p>
       </div>
-
-      {/* Progress bar */}
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700
-                      ${isWinner ? "bg-yellow-400" : "bg-brand"}`}
-          style={{ width: `${candidate.percentage}%` }}
-        />
+      <div style={{ fontSize:"1.125rem", fontWeight:800, color: isWinner ? "var(--amber)" : "var(--slate)", flexShrink:0 }}>
+        {candidate.percentage}%
       </div>
+      <div style={{ fontSize:"0.8125rem", color:"var(--slate)", flexShrink:0 }}>{candidate.vote_count}v</div>
     </div>
   );
 }
 
-
-// ════════════════════════════════════════════════════════
-// POSITION RESULTS PANEL
-// ════════════════════════════════════════════════════════
 function PositionResults({ position }) {
-  // Sort candidates by vote count descending
-  const sorted = [...(position.candidates || [])].sort(
-    (a, b) => b.vote_count - a.vote_count
-  );
-  const winnerName = position.winner;
-
+  const sorted = [...(position.candidates || [])].sort((a,b) => b.vote_count - a.vote_count);
   return (
-    <div className="bg-white rounded-2xl border border-gray-200
-                    shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-navy to-brand px-5 py-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-white font-bold text-base">
-            {position.position_name}
-          </h3>
-          <span className="text-blue-200 text-sm">
-            {position.total_votes} vote{position.total_votes !== 1 ? "s" : ""}
-          </span>
-        </div>
-        {winnerName && (
-          <p className="text-yellow-300 text-sm mt-1">
-            🏆 {winnerName} leads
-          </p>
-        )}
+    <div className="card card-accent-blue" style={{ marginBottom:"1.25rem" }}>
+      <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ fontWeight:700, color:"var(--ink)" }}>{position.position_name}</div>
+        <div style={{ fontSize:"0.8125rem", color:"var(--slate)" }}>{position.total_votes} votes</div>
       </div>
-
-      <div className="p-4 space-y-3">
-        {sorted.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-6">
-            No votes cast for this position yet.
-          </p>
-        ) : (
-          sorted.map((candidate) => (
-            <CandidateResult
-              key={candidate.candidate_id}
-              candidate={candidate}
-              isWinner={candidate.candidate_name === winnerName && position.total_votes > 0}
-              totalVotes={position.total_votes}
-            />
-          ))
-        )}
+      <div style={{ padding:"1rem 1.25rem" }}>
+        {sorted.length === 0
+          ? <p style={{ textAlign:"center", color:"var(--slate)", fontSize:"0.875rem", padding:"1.5rem 0" }}>No votes yet.</p>
+          : sorted.map(c => <CandidateResult key={c.candidate_id} candidate={c} isWinner={c.candidate_name === position.winner && position.total_votes > 0} />)
+        }
       </div>
     </div>
   );
 }
 
-
-// ════════════════════════════════════════════════════════
-// TURNOUT CHART (Admin only)
-// Simple bar chart by department
-// ════════════════════════════════════════════════════════
 function TurnoutPanel({ electionId }) {
-  const [turnout, setTurnout] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    analyticsAPI.turnout(electionId)
-      .then((res) => setTurnout(res.data.turnout_by_department || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [electionId]);
-
-  if (loading) return (
-    <div className="flex justify-center py-8">
-      <div className="w-6 h-6 border-2 border-brand border-t-transparent
-                      rounded-full animate-spin" />
-    </div>
-  );
-
-  if (turnout.length === 0) return null;
-
-  const maxRate = Math.max(...turnout.map((d) => d.turnout_rate), 1);
-
+  const [data, setData] = useState([]);
+  useEffect(() => { analyticsAPI.turnout(electionId).then(r => setData(r.data.turnout_by_department || [])).catch(() => {}); }, [electionId]);
+  if (!data.length) return null;
+  const max = Math.max(...data.map(d => d.turnout_rate), 1);
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-6">
-      <h3 className="font-bold text-navy mb-4">📊 Turnout by Department</h3>
-      <div className="space-y-3">
-        {turnout.map((dept) => (
-          <div key={dept.department}>
-            <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-gray-700 font-medium truncate flex-1">
-                {dept.department}
-              </span>
-              <span className="text-gray-500 text-xs ml-3 flex-shrink-0">
-                {dept.voted}/{dept.registered} ({dept.turnout_rate}%)
-              </span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand rounded-full transition-all duration-500"
-                style={{ width: `${(dept.turnout_rate / maxRate) * 100}%` }}
-              />
-            </div>
+    <div className="card" style={{ padding:"1.25rem", marginBottom:"1.5rem" }}>
+      <div style={{ fontWeight:700, color:"var(--ink)", marginBottom:"1rem" }}>Turnout by Department</div>
+      {data.map(d => (
+        <div key={d.department} style={{ marginBottom:"0.75rem" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:"0.875rem" }}>
+            <span style={{ fontWeight:500 }}>{d.department || "Unknown"}</span>
+            <span style={{ color:"var(--slate)" }}>{d.voted}/{d.registered} ({d.turnout_rate}%)</span>
           </div>
-        ))}
-      </div>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width:`${(d.turnout_rate/max)*100}%` }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-
-// ════════════════════════════════════════════════════════
-// SINGLE ELECTION RESULTS VIEW
-// ════════════════════════════════════════════════════════
-function ElectionResults({ electionId, electionTitle, onBack, isAdmin }) {
+function ElectionResults({ election, onBack, isAdmin }) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState("");
+  const [error, setError]     = useState("");
 
   useEffect(() => {
     const load = async () => {
-      try {
-        setLoading(true);
-        const res = await analyticsAPI.results(electionId);
-        setResults(res.data);
-      } catch (err) {
-        setError(err.response?.data?.detail || "Failed to load results.");
-      } finally {
-        setLoading(false);
-      }
+      try { setLoading(true); const r = await analyticsAPI.results(election.election_id); setResults(r.data); }
+      catch (err) { setError(err.response?.data?.detail || "Failed to load results."); }
+      finally { setLoading(false); }
     };
     load();
-    // Auto-refresh every 30 seconds for live elections
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, [electionId]);
+    const iv = setInterval(load, 30000);
+    return () => clearInterval(iv);
+  }, [election.election_id]);
 
-  if (loading) return (
-    <div className="flex justify-center py-20">
-      <div className="w-10 h-10 border-4 border-brand border-t-transparent
-                      rounded-full animate-spin" />
-    </div>
-  );
-
-  if (error) return (
-    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl
-                    px-5 py-4 text-sm">
-      ⚠️ {error}
-    </div>
-  );
-
+  if (loading) return <div style={{ display:"flex", justifyContent:"center", padding:"5rem 0" }}><div className="spinner" /></div>;
+  if (error) return <div className="alert alert-error" style={{ borderRadius:8 }}><span>⚠</span> {error}</div>;
   if (!results) return null;
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1 text-gray-500 hover:text-navy
-                   text-sm mb-6 transition-colors">
-        ← All Elections
-      </button>
+      <button className="btn btn-ghost btn-sm" style={{ marginBottom:"1.5rem" }} onClick={onBack}>← All Elections</button>
 
-      {/* Results header */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm
-                      overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-navy to-brand p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-white font-bold text-xl">
-                {results.election_title}
-              </h2>
-              <p className="text-blue-200 text-sm mt-1 capitalize">
-                Status: {results.election_status}
-              </p>
-            </div>
-            {results.election_status === "active" && (
-              <span className="bg-green-400 text-green-900 text-xs font-bold
-                               px-3 py-1 rounded-full whitespace-nowrap">
-                🔴 LIVE
-              </span>
-            )}
+      <div className="card card-accent-blue" style={{ padding:"1.5rem", marginBottom:"2rem" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"1rem", marginBottom:"1.25rem" }}>
+          <div>
+            <h2 style={{ fontSize:"1.375rem", fontWeight:800, color:"var(--ink)", margin:0 }}>{results.election_title}</h2>
+            <div style={{ fontSize:"0.875rem", color:"var(--slate)", marginTop:4, textTransform:"capitalize" }}>Status: {results.election_status}</div>
           </div>
+          {results.election_status === "active" && <span className="badge badge-green">🔴 Live</span>}
         </div>
-
-        {/* Summary stats */}
-        <div className="grid grid-cols-3 divide-x divide-gray-100">
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:"0.75rem" }}>
           {[
-            { label: "Total Votes",   value: results.total_votes_cast },
-            { label: "Registered",    value: results.total_registered  },
-            { label: "Turnout",       value: `${results.turnout_percent}%` },
+            { label:"Total Votes",  value: results.total_votes_cast },
+            { label:"Registered",   value: results.total_registered },
+            { label:"Turnout",      value: `${results.turnout_percent}%` },
           ].map(({ label, value }) => (
-            <div key={label} className="px-4 py-4 text-center">
-              <p className="text-2xl font-bold text-navy">{value}</p>
-              <p className="text-gray-400 text-xs mt-0.5">{label}</p>
+            <div key={label} style={{ background:"var(--ice)", borderRadius:8, padding:"0.875rem", textAlign:"center" }}>
+              <div style={{ fontSize:"1.75rem", fontWeight:800, color:"var(--ink)", lineHeight:1 }}>{value}</div>
+              <div style={{ fontSize:"0.6875rem", fontWeight:700, color:"var(--slate)", textTransform:"uppercase", letterSpacing:"0.05em", marginTop:3 }}>{label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Admin turnout chart */}
-      {isAdmin && <TurnoutPanel electionId={electionId} />}
+      {isAdmin && <TurnoutPanel electionId={election.election_id} />}
 
-      {/* Position results */}
-      <div className="space-y-5">
-        {results.positions?.length > 0 ? (
-          results.positions.map((position) => (
-            <PositionResults key={position.position_id} position={position} />
-          ))
-        ) : (
-          <div className="text-center py-10 text-gray-400">
-            No results available yet.
-          </div>
-        )}
-      </div>
+      <div>{results.positions?.map(p => <PositionResults key={p.position_id} position={p} />)}</div>
 
-      {/* Live refresh notice */}
       {results.election_status === "active" && (
-        <p className="text-center text-gray-400 text-xs mt-6">
-          🔄 Results refresh automatically every 30 seconds
+        <p style={{ textAlign:"center", color:"var(--slate)", fontSize:"0.8125rem", marginTop:"1rem" }}>
+          Results refresh automatically every 30 seconds
         </p>
       )}
     </div>
   );
 }
 
-
-// ════════════════════════════════════════════════════════
-// ELECTION SELECTION CARD
-// ════════════════════════════════════════════════════════
-function ElectionSelectCard({ election, onSelect }) {
-  const statusColor = {
-    active:   "bg-green-100 text-green-700",
-    closed:   "bg-red-100 text-red-700",
-    archived: "bg-gray-100 text-gray-600",
-    draft:    "bg-blue-100 text-blue-700",
-  }[election.status] || "bg-gray-100 text-gray-600";
-
+function ElectionCard({ election, onSelect }) {
+  const st = { active:"badge-green", closed:"badge-red", archived:"badge-amber", draft:"badge-slate" }[election.status] || "badge-slate";
   return (
-    <button
-      onClick={() => onSelect(election)}
-      className="w-full bg-white border border-gray-200 rounded-xl p-5
-                 hover:border-brand hover:shadow-md transition-all text-left group">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-navy text-base group-hover:text-brand
-                        transition-colors leading-tight">
-            {election.title}
-          </p>
-          {election.description && (
-            <p className="text-gray-400 text-sm mt-1 line-clamp-1">
-              {election.description}
-            </p>
-          )}
-        </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium
-                          flex-shrink-0 capitalize ${statusColor}`}>
-          {election.status}
-        </span>
+    <button onClick={() => onSelect(election)} style={{ width:"100%", textAlign:"left", background:"#fff", border:"1px solid var(--border)", borderRadius:12, padding:"1.25rem 1.5rem", cursor:"pointer", transition:"all 0.15s", boxShadow:"var(--shadow)" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--blue)"; e.currentTarget.style.boxShadow = "var(--shadow-md)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "var(--shadow)"; }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"0.75rem" }}>
+        <div style={{ fontWeight:700, color:"var(--ink)", fontSize:"1rem", flex:1 }}>{election.title}</div>
+        <span className={`badge ${st}`} style={{ textTransform:"capitalize" }}>{election.status}</span>
       </div>
-      <div className="flex items-center gap-1 mt-3 text-brand text-sm font-medium">
-        View Results
-        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 5l7 7-7 7"/>
-        </svg>
-      </div>
+      {election.description && <p style={{ fontSize:"0.875rem", color:"var(--slate)", margin:"0.5rem 0 0" }} className="truncate-2">{election.description}</p>}
+      <div style={{ fontSize:"0.8rem", color:"var(--blue)", fontWeight:600, marginTop:"0.875rem" }}>View Results →</div>
     </button>
   );
 }
 
-
-// ════════════════════════════════════════════════════════
-// MAIN RESULTS PAGE
-// ════════════════════════════════════════════════════════
 export default function ResultsPage() {
-  const { user, isAdmin }       = useAuth();
+  const { isAdmin }       = useAuth();
   const [elections, setElections] = useState([]);
-  const [selected,  setSelected]  = useState(null);
-  const [loading,   setLoading]   = useState(true);
+  const [selected, setSelected]   = useState(null);
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await electionsAPI.list();
-        // Show only elections that have results (active/closed/archived)
-        const withResults = (res.data.elections || []).filter(
-          (e) => e.status !== "draft"
-        );
-        setElections(withResults);
-      } catch {}
-      finally { setLoading(false); }
-    };
-    load();
+    electionsAPI.list()
+      .then(r => setElections((r.data.elections || []).filter(e => e.status !== "draft")))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  if (selected) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <ElectionResults
-          electionId={selected.election_id}
-          electionTitle={selected.title}
-          onBack={() => setSelected(null)}
-          isAdmin={isAdmin}
-        />
-      </div>
-    );
-  }
+  if (selected) return <div className="page-narrow"><ElectionResults election={selected} onBack={() => setSelected(null)} isAdmin={isAdmin} /></div>;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-navy">Election Results</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Select an election to view vote counts and results.
-        </p>
+    <div className="page-narrow">
+      <div style={{ marginBottom:"2rem" }}>
+        <h1 style={{ fontSize:"1.5rem", fontWeight:800, color:"var(--ink)", marginBottom:"0.25rem" }}>Results</h1>
+        <p style={{ fontSize:"0.9rem", color:"var(--slate)", margin:0 }}>Select an election to view vote counts and outcomes.</p>
       </div>
-
-      {loading && (
-        <div className="flex justify-center py-20">
-          <div className="w-10 h-10 border-4 border-brand border-t-transparent
-                          rounded-full animate-spin" />
-        </div>
-      )}
-
+      {loading && <div style={{ display:"flex", justifyContent:"center", padding:"4rem 0" }}><div className="spinner" /></div>}
       {!loading && elections.length === 0 && (
-        <div className="text-center py-20 text-gray-400">
-          <span className="text-5xl block mb-4">📊</span>
-          <p className="font-medium text-lg">No results available yet</p>
-          <p className="text-sm mt-1">
-            Results appear once an election is opened or closed.
-          </p>
+        <div style={{ textAlign:"center", padding:"5rem 0", color:"var(--slate)" }}>
+          <div style={{ fontSize:"3rem", marginBottom:"1rem" }}>📊</div>
+          <div style={{ fontWeight:700, color:"var(--ink)", marginBottom:"0.375rem" }}>No results yet</div>
+          <div style={{ fontSize:"0.875rem" }}>Results appear once an election opens or closes.</div>
         </div>
       )}
-
-      {!loading && elections.length > 0 && (
-        <div className="space-y-4">
-          {elections.map((election) => (
-            <ElectionSelectCard
-              key={election.election_id}
-              election={election}
-              onSelect={setSelected}
-            />
-          ))}
-        </div>
-      )}
+      <div style={{ display:"flex", flexDirection:"column", gap:"0.875rem" }}>
+        {elections.map(e => <ElectionCard key={e.election_id} election={e} onSelect={setSelected} />)}
+      </div>
     </div>
   );
 }

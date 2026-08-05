@@ -1,9 +1,12 @@
 export default function LoadingSpinner({ message = "Loading..." }) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-12 h-12 border-4 border-brand border-t-transparent
-                        rounded-full animate-spin mb-4" />
-        <p className="text-gray-500 text-sm">{message}</p>
-      </div>
-    );
-  }
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      minHeight: "60vh", gap: "1rem",
+    }}>
+      <div className="spinner" />
+      <p style={{ color: "var(--slate)", fontSize: "0.875rem" }}>{message}</p>
+    </div>
+  );
+}

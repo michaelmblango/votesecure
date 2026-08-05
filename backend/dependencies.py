@@ -56,7 +56,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
 def require_system_admin(current_user: dict = Depends(get_current_user)) -> dict:
     """
     Require the user to be specifically a system_admin.
-    The highest privilege level — used for user management.
+    The highest privilege level - used for user management.
     """
     if current_user.get("role") != "system_admin":
         raise HTTPException(

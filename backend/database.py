@@ -1,7 +1,7 @@
 # backend/database.py
 # ============================================================
 # Database connection manager for VoteSecure
-# Provides get_connection() — called by every file that
+# Provides get_connection() - called by every file that
 # needs to read from or write to PostgreSQL
 # ============================================================
 

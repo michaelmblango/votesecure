@@ -20,7 +20,7 @@ class VoterRegister(BaseModel):
     full_name:         str
     email:             EmailStr        # Pydantic validates email format automatically
     student_number:    str             # Unique college registration number
-    password:          str             # Will be hashed before storage — never stored plain
+    password:          str             # Will be hashed before storage - never stored plain
     department:        Optional[str]   # e.g. "Computer Science"
     level:             Optional[str]   # e.g. "400"
     eligibility_group: Optional[str]   # e.g. "undergraduate"
@@ -101,7 +101,7 @@ class LoginStep1Response(BaseModel):
 class LoginSuccessResponse(BaseModel):
     """
     Returned after full authentication (password + OTP) succeeds.
-    The access_token is the JWT — frontend stores this and sends
+    The access_token is the JWT - frontend stores this and sends
     it with every future request in the Authorization header.
     """
     status:         str   # Always "authenticated"

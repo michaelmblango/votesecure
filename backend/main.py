@@ -1,6 +1,6 @@
 # backend/main.py
 # ============================================================
-# VoteSecure — FastAPI Application Entry Point
+# VoteSecure - FastAPI Application Entry Point
 # This is the first file the server reads on startup
 # Run with: uvicorn main:app --reload
 # ============================================================
@@ -12,6 +12,7 @@ from database import test_connection
 
 # Import all routers (we will fill these files next)
 from routers import auth, elections, votes, analytics
+from routers import org_auth, licences
 
 
 # ── Create the FastAPI app ───────────────────────────────────
@@ -49,10 +50,12 @@ app.include_router(auth.router,      prefix="/api/auth",      tags=["Authenticat
 app.include_router(elections.router, prefix="/api/elections", tags=["Elections"])
 app.include_router(votes.router,     prefix="/api/votes",     tags=["Votes"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(org_auth.router,  prefix="/api/org",      tags=["Organisation Auth"])
+app.include_router(licences.router,  prefix="/api/licences", tags=["Licences and Plans"])
 
 
 # ── Startup Event ────────────────────────────────────────────
-# Runs once when the server starts — before accepting requests
+# Runs once when the server starts - before accepting requests
 @app.on_event("startup")
 async def on_startup():
     print(f"\n{'='*50}")
@@ -65,7 +68,7 @@ async def on_startup():
 
 
 # ── Health Check ─────────────────────────────────────────────
-# Always include this — deployment systems ping it to check
+# Always include this - deployment systems ping it to check
 # if your server is alive and responding
 @app.get("/", tags=["Health"])
 def health_check():

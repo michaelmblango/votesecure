@@ -1,11 +1,11 @@
 # backend/routers/auth.py
 # ============================================================
 # Authentication endpoints for VoteSecure
-# POST /api/auth/register     — Register a new voter (admin)
-# POST /api/auth/login        — Step 1: password verification
-# POST /api/auth/login/otp    — Step 2: OTP verification
-# GET  /api/auth/me           — Get current user profile
-# POST /api/auth/logout       — Logout (client clears token)
+# POST /api/auth/register     - Register a new voter (admin)
+# POST /api/auth/login        - Step 1: password verification
+# POST /api/auth/login/otp    - Step 2: OTP verification
+# GET  /api/auth/me           - Get current user profile
+# POST /api/auth/logout       - Logout (client clears token)
 # ============================================================
 
 from fastapi import APIRouter, HTTPException, status, Request, Depends
@@ -38,7 +38,7 @@ def register_voter(
 ):
     """
     Register a new voter in the system.
-    Admin-only endpoint — voters cannot self-register.
+    Admin-only endpoint - voters cannot self-register.
 
     Creates two rows:
     1. A row in users (login credentials)
@@ -140,7 +140,7 @@ def register_voter(
 
 
 # ════════════════════════════════════════════════════════════
-# LOGIN — STEP 1: Password Verification
+# LOGIN - STEP 1: Password Verification
 # ════════════════════════════════════════════════════════════
 @router.post("/login", response_model=LoginStep1Response)
 def login_step1(data: VoterLogin, request: Request):
@@ -177,9 +177,9 @@ def login_step1(data: VoterLogin, request: Request):
         )
         user = cursor.fetchone()
 
-        # ── Generic error — don't reveal which check failed
+        # ── Generic error - don't reveal which check failed
         # (Security: never tell an attacker "wrong password"
-        #  vs "user not found" — both return the same message)
+        #  vs "user not found" - both return the same message)
         if not user or not verify_password(data.password, user["password_hash"]):
             attempts = record_failed_attempt(data.student_number)
             remaining = settings.MAX_LOGIN_ATTEMPTS - attempts
@@ -214,7 +214,7 @@ def login_step1(data: VoterLogin, request: Request):
                 detail="Your account has been deactivated. Contact the administrator.",
             )
 
-        # ── Password correct — generate and send OTP ──────
+        # ── Password correct - generate and send OTP ──────
         user_id  = str(user["user_id"])
         otp_code = generate_otp(user_id)
 
@@ -260,7 +260,7 @@ def login_step1(data: VoterLogin, request: Request):
 
 
 # ════════════════════════════════════════════════════════════
-# LOGIN — STEP 2: OTP Verification
+# LOGIN - STEP 2: OTP Verification
 # ════════════════════════════════════════════════════════════
 @router.post("/login/otp", response_model=LoginSuccessResponse)
 def login_step2(data: OTPVerify, request: Request):
@@ -290,7 +290,7 @@ def login_step2(data: OTPVerify, request: Request):
                 detail="Invalid or expired verification code. Please try again.",
             )
 
-        # ── OTP correct — fetch user details ──────────────
+        # ── OTP correct - fetch user details ──────────────
         cursor.execute(
             "SELECT user_id, full_name, email, role FROM users WHERE user_id = %s",
             (data.user_id,)
@@ -307,7 +307,7 @@ def login_step2(data: OTPVerify, request: Request):
         access_token = create_access_token(user_id=user_id, role=role)
 
         # ── Clear failed attempts on success ──────────────
-        # We need student_number to clear — fetch from voters
+        # We need student_number to clear - fetch from voters
         cursor.execute(
             "SELECT student_number FROM voters WHERE user_id = %s",
             (user_id,)
@@ -418,7 +418,7 @@ def logout(current_user: dict = Depends(get_current_user)):
         cursor.close()
         conn.close()
 
-# ── TEMPORARY DEBUG ENDPOINT — remove before submission ──
+# ── TEMPORARY DEBUG ENDPOINT - remove before submission ──
 @router.post("/debug-login")
 def debug_login(data: VoterLogin):
     """
@@ -463,7 +463,7 @@ def debug_login(data: VoterLogin):
             "hash_preview":   user["password_hash"][:20] + "...",
             "problem": (
                 None if password_ok
-                else "Password does not match stored hash — regenerate hash"
+                else "Password does not match stored hash - regenerate hash"
             ),
         }
     finally:

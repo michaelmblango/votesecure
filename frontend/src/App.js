@@ -18,9 +18,9 @@ function AppRoutes() {
   if (loading) return <LoadingSpinner message="Loading VoteSecure..." />;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="app-shell">
       {user && <Navbar />}
-      <main className="flex-1">
+      <main className="app-main">
         <Routes>
           {/* ── Public ── */}
           <Route path="/login" element={
@@ -28,7 +28,7 @@ function AppRoutes() {
               ? <Navigate to={user.role === "voter" ? "/ballot" : "/admin"} replace/>
               : <LoginPage />
           }/>
-          {/* Verify is public — no login needed */}
+          {/* Verify is public - no login needed */}
           <Route path="/verify" element={<VerifyVotePage />} />
 
           {/* ── Voter ── */}
@@ -65,12 +65,18 @@ function AppRoutes() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="bg-navy text-center py-4 mt-8">
-        <p className="text-blue-400 text-xs">
-          VoteSecure · AI Professional College · Department of Computer Science
+      <footer style={{
+        borderTop: "1px solid var(--border)",
+        background: "#fff",
+        padding: "1.25rem 1.5rem",
+        textAlign: "center",
+        marginTop: "auto",
+      }}>
+        <p style={{ fontSize: "0.8125rem", color: "var(--slate)", margin: 0 }}>
+          VoteSecure · AI Professional College · Department of Computer Science · 2025/2026
         </p>
-        <p className="text-blue-600 text-xs mt-0.5">
-          Final Year Project 2024/2025 · Secure · Transparent · Auditable
+        <p style={{ fontSize: "0.75rem", color: "#CBD5E1", margin: "0.25rem 0 0" }}>
+          Secure · Transparent · Auditable
         </p>
       </footer>
     </div>

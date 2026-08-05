@@ -51,7 +51,7 @@ CREATE TYPE log_actor_type AS ENUM (
 -- ============================================================
 -- TABLE 1: users
 -- Stores ALL system users: voters, admins, candidates, auditors
--- Password is ALWAYS stored as a bcrypt hash — never plain text
+-- Password is ALWAYS stored as a bcrypt hash - never plain text
 -- ============================================================
 
 CREATE TABLE users (
@@ -176,7 +176,7 @@ CREATE INDEX idx_candidates_status   ON candidates(approval_status);
 
 -- ============================================================
 -- TABLE 6: votes  ← THE MOST CRITICAL TABLE
--- Stores ballot choices — NO voter identity column here
+-- Stores ballot choices - NO voter identity column here
 -- This is how ballot secrecy is enforced at the schema level
 -- A result report can only show: candidate X got N votes
 -- It CANNOT show: voter Y chose candidate X
@@ -194,7 +194,7 @@ CREATE TABLE votes (
 
     cast_at          TIMESTAMP DEFAULT NOW(),
 
-    -- Stored for fraud detection analysis only — NOT used to identify the voter
+    -- Stored for fraud detection analysis only - NOT used to identify the voter
     ip_address       INET
     -- NOTE: There is deliberately NO voter_id column in this table
 );
@@ -295,7 +295,117 @@ CREATE INDEX idx_otp_expires ON otp_tokens(expires_at);
 
 
 -- ============================================================
--- SEED DATA — Default System Administrator Account
+-- TABLE 10: organisations
+-- One row per client organisation using VoteSecure.
+-- An organisation needs MIN_ORG_ADMINS admins registered
+-- before its status flips from 'pending' to 'active'.
+-- ============================================================
+
+CREATE TABLE organisations (
+    org_id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_name         VARCHAR(300) NOT NULL,
+    slug             VARCHAR(100) UNIQUE NOT NULL,
+    status           VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending | active
+    invite_code      VARCHAR(50) UNIQUE NOT NULL,
+    contact_email    VARCHAR(200) NOT NULL,
+    created_at       TIMESTAMP DEFAULT NOW(),
+    activated_at     TIMESTAMP
+);
+
+CREATE INDEX idx_organisations_slug   ON organisations(slug);
+CREATE INDEX idx_organisations_status ON organisations(status);
+
+
+-- ============================================================
+-- TABLE 11: org_admins
+-- Admin accounts belonging to an organisation. The first
+-- (owner) admin creates the org; further admins join with
+-- the invite code until MIN_ORG_ADMINS is reached.
+-- ============================================================
+
+CREATE TABLE org_admins (
+    org_admin_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id           UUID NOT NULL REFERENCES organisations(org_id) ON DELETE CASCADE,
+    username         VARCHAR(100) UNIQUE NOT NULL,
+    email            VARCHAR(200) UNIQUE NOT NULL,
+    password_hash    VARCHAR(255) NOT NULL,
+    full_name        VARCHAR(200) NOT NULL,
+    is_owner         BOOLEAN DEFAULT FALSE,
+    is_active        BOOLEAN DEFAULT TRUE,
+    last_login       TIMESTAMP,
+    created_at       TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_org_admins_org ON org_admins(org_id);
+
+
+-- ============================================================
+-- TABLE 12: org_admin_otp
+-- One-time login codes for org admin 2-factor authentication.
+-- ============================================================
+
+CREATE TABLE org_admin_otp (
+    otp_id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_admin_id     UUID NOT NULL REFERENCES org_admins(org_admin_id) ON DELETE CASCADE,
+    otp_code         VARCHAR(10) NOT NULL,
+    expires_at       TIMESTAMP NOT NULL,
+    is_used          BOOLEAN DEFAULT FALSE,
+    created_at       TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_org_admin_otp_admin ON org_admin_otp(org_admin_id);
+
+
+-- ============================================================
+-- TABLE 13: election_plans
+-- Pricing tiers an organisation can purchase a licence for.
+-- ============================================================
+
+CREATE TABLE election_plans (
+    plan_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_name        VARCHAR(100) UNIQUE NOT NULL,
+    max_voters       INT NOT NULL,
+    price_usd        NUMERIC(10,2) NOT NULL DEFAULT 0,
+    is_active        BOOLEAN DEFAULT TRUE,
+    display_order    INT DEFAULT 0,
+    created_at       TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ============================================================
+-- TABLE 14: election_licences
+-- Licence codes issued to an organisation after payment,
+-- consumed once when they set up an election.
+-- ============================================================
+
+CREATE TABLE election_licences (
+    licence_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    licence_code     VARCHAR(20) UNIQUE NOT NULL,
+    org_id           UUID NOT NULL REFERENCES organisations(org_id) ON DELETE CASCADE,
+    plan_id          UUID NOT NULL REFERENCES election_plans(plan_id),
+    status           VARCHAR(20) NOT NULL DEFAULT 'unused', -- unused | used | expired | revoked
+    notes            TEXT,
+    used_at          TIMESTAMP,
+    created_at       TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_election_licences_org  ON election_licences(org_id);
+CREATE INDEX idx_election_licences_code ON election_licences(licence_code);
+
+
+-- ============================================================
+-- SEED DATA - Default Election Plans
+-- ============================================================
+
+INSERT INTO election_plans (plan_name, max_voters, price_usd, display_order) VALUES
+    ('Free',       100,   0.00, 1),
+    ('Starter',    1000,  49.00, 2),
+    ('Growth',     5000,  149.00, 3),
+    ('Enterprise', 50000, 499.00, 4);
+
+
+-- ============================================================
+-- SEED DATA - Default System Administrator Account
 -- Password: Admin@2025 (hashed with bcrypt)
 -- CHANGE THIS PASSWORD immediately after first login
 -- ============================================================
@@ -310,7 +420,7 @@ VALUES (
 
 
 -- ============================================================
--- VERIFICATION — Run this after to confirm all tables exist
+-- VERIFICATION - Run this after to confirm all tables exist
 -- ============================================================
 -- SELECT table_name FROM information_schema.tables
 -- WHERE table_schema = 'public'
