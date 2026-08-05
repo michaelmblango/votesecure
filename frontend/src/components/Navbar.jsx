@@ -61,6 +61,14 @@ export default function Navbar() {
             </div>
           </Link>
 
+          {!user && (
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginLeft: "auto" }}>
+              <Link to="/pricing" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--slate)", textDecoration: "none" }}>Pricing</Link>
+              <Link to="/org/login" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--slate)", textDecoration: "none" }}>Admin</Link>
+              <Link to="/login" className="btn btn-navy btn-sm">Voter Login</Link>
+            </div>
+          )}
+
           {/* Desktop links */}
           {user && (
             <div className="nav-desktop" style={{ alignItems: "center", gap: "1.75rem", flex: 1 }}>

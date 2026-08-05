@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute   from "./components/ProtectedRoute";
 import Navbar           from "./components/Navbar";
@@ -12,6 +12,10 @@ import ResultsPage      from "./pages/ResultsPage";
 import AuditLogPage     from "./pages/AuditLogPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
+import PricingPage      from "./pages/PricingPage";
+import OrgSignupPage    from "./pages/OrgSignupPage";
+import OrgJoinPage      from "./pages/OrgJoinPage";
+import OrgLoginPage     from "./pages/OrgLoginPage";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -19,7 +23,7 @@ function AppRoutes() {
 
   return (
     <div className="app-shell">
-      {user && <Navbar />}
+      <Navbar />
       <main className="app-main">
         <Routes>
           {/* ── Public ── */}
@@ -52,12 +56,18 @@ function AppRoutes() {
             <ProtectedRoute adminOnly><AuditLogPage /></ProtectedRoute>
           }/>
 
+          {/* ── Organisation / SaaS ── */}
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/org/signup" element={<OrgSignupPage />} />
+          <Route path="/org/join/:invite_code" element={<OrgJoinPage />} />
+          <Route path="/org/login" element={<OrgLoginPage />} />
+
           {/* ── Default ── */}
           <Route path="/" element={
             <Navigate to={
               user
                 ? user.role === "voter" ? "/ballot" : "/admin"
-                : "/login"
+                : "/pricing"
             } replace/>
           }/>
           <Route path="*" element={<NotFound />} />
@@ -74,6 +84,8 @@ function AppRoutes() {
       }}>
         <p style={{ fontSize: "0.8125rem", color: "var(--slate)", margin: 0 }}>
           VoteSecure · AI Professional College · Department of Computer Science · 2025/2026
+          <Link to="/pricing" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Pricing</Link>
+          <Link to="/org/signup" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Create Organisation</Link>
         </p>
         <p style={{ fontSize: "0.75rem", color: "#CBD5E1", margin: "0.25rem 0 0" }}>
           Secure · Transparent · Auditable
