@@ -185,6 +185,18 @@ code {
   .stats-grid-4 { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* 3-up results summary grid: collapses to 1 column on very narrow screens */
+.results-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+@media (max-width: 400px) {
+  .results-stats-grid { grid-template-columns: repeat(1, 1fr); }
+}
+
+/* Audit log expanded-row detail grid: collapses to 1 column below 600px */
+.audit-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+@media (max-width: 600px) {
+  .audit-detail-grid { grid-template-columns: repeat(1, 1fr); }
+}
+
 /* ── Progress bar ────────────────────────────────────────────── */
 .progress-track {
   width: 100%;

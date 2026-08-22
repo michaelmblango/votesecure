@@ -109,7 +109,7 @@ function ElectionResults({ election, onBack, isAdmin }) {
           </div>
           {results.election_status === "active" && <span className="badge badge-green">🔴 Live</span>}
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:"0.75rem" }}>
+        <div className="results-stats-grid">
           {[
             { label:"Total Votes",  value: results.total_votes_cast },
             { label:"Registered",   value: results.total_registered },

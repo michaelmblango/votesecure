@@ -51,7 +51,7 @@ function LogRow({ log, index }) {
         </svg>
       </button>
       {open && (
-        <div className="animate-in" style={{ padding:"0.875rem 1.25rem 1.125rem", borderTop:"1px solid var(--border)", display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:"0.75rem" }}>
+        <div className="animate-in audit-detail-grid" style={{ padding:"0.875rem 1.25rem 1.125rem", borderTop:"1px solid var(--border)" }}>
           {[
             ["Actor",      log.actor_name || "System"],
             ["Actor Type", log.actor_type  || "-"],

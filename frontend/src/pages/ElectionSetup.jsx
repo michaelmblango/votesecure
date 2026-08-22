@@ -245,7 +245,7 @@ export default function ElectionSetup() {
         </div>
 
         {/* Stats strip */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"0.75rem", marginTop:"1.25rem" }}>
+        <div className="stats-grid-4" style={{ gap:"0.75rem", marginTop:"1.25rem" }}>
           {[
             { label:"Positions",       value: election.positions?.length ?? 0 },
             { label:"Approved",        value: totalApproved },
