@@ -92,7 +92,7 @@ export default function OrgLoginPage() {
                   <label className="input-label">Password</label>
                   <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Your password" required />
                 </div>
-                <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem" }}>
+                <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem", minHeight: "44px" }}>
                   {loading ? "Verifying..." : "Continue"}
                 </button>
               </form>
@@ -119,10 +119,10 @@ export default function OrgLoginPage() {
                     style={{ textAlign: "center", fontSize: "2rem", letterSpacing: "0.4em", padding: "0.875rem" }}
                   />
                 </div>
-                <button type="submit" disabled={loading || otpCode.length !== 6} className="btn btn-success btn-lg">
+                <button type="submit" disabled={loading || otpCode.length !== 6} className="btn btn-success btn-lg" style={{ minHeight: "44px" }}>
                   {loading ? "Verifying..." : "Sign In"}
                 </button>
-                <button type="button" onClick={() => { setStep(1); setError(""); setOtpCode(""); }} className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem" }}>
+                <button type="button" onClick={() => { setStep(1); setError(""); setOtpCode(""); }} className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem", minHeight: "44px" }}>
                   Back
                 </button>
               </form>

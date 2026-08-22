@@ -29,7 +29,7 @@ export default function PricingPage() {
     <div style={{ minHeight: "100vh", background: "var(--ice)" }}>
 
       {/* Hero */}
-      <div style={{ background: "var(--navy)", padding: "4rem 1.5rem 3rem", textAlign: "center" }}>
+      <div style={{ background: "var(--navy)", padding: "clamp(2rem, 6vw, 4rem) 1.25rem clamp(1.5rem, 4vw, 3rem)", textAlign: "center" }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🗳️</div>
           <h1 style={{ color: "#fff", fontSize: "2.25rem", fontWeight: 800, margin: "0 0 1rem", letterSpacing: "-0.02em" }}>
@@ -49,7 +49,7 @@ export default function PricingPage() {
             <div className="spinner" />
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: "1.25rem" }}>
             {plans.map((plan, idx) => {
               const isPopular   = plan.plan_name === "standard";
               const isCustom    = plan.plan_name === "custom";
@@ -198,7 +198,7 @@ export default function PricingPage() {
         </div>
 
         {/* Bottom CTA */}
-        <div style={{ textAlign: "center", marginTop: "3.5rem", padding: "2.5rem", background: "var(--navy)", borderRadius: 16 }}>
+        <div style={{ textAlign: "center", marginTop: "3.5rem", padding: "clamp(1.5rem, 4vw, 2.5rem)", background: "var(--navy)", borderRadius: 16 }}>
           <h2 style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 800, margin: "0 0 0.75rem" }}>
             Ready to run your first election?
           </h2>

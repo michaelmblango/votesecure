@@ -137,7 +137,7 @@ export default function OrgSignupPage() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem" }}>
+            <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem", minHeight: "44px" }}>
               {loading ? "Creating organisation..." : "Create Organisation"}
             </button>
 

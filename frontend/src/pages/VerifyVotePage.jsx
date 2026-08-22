@@ -47,7 +47,7 @@ export default function VerifyVotePage() {
                 rows={3}
                 style={{ resize:"none", lineHeight:1.6 }}
               />
-              <div style={{ fontSize:"0.75rem", color:"var(--slate)", marginTop:"0.375rem" }}>
+              <div style={{ fontSize:"0.75rem", color:"var(--slate)", marginTop:"0.375rem", wordBreak:"break-all", overflowWrap:"break-word" }}>
                 Your receipt looks like: a8f5f167f44f4964e6c998dee827110c...
               </div>
             </div>

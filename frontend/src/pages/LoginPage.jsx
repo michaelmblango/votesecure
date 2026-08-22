@@ -111,7 +111,7 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem" }}>
+                <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem", minHeight: "44px" }}>
                   {loading ? <><span className="spinner-sm" style={{ borderTopColor: "#fff" }} /> Verifying...</> : "Continue →"}
                 </button>
               </form>
@@ -142,13 +142,13 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || otpCode.length !== 6}
-                  className="btn btn-success btn-lg">
+                  className="btn btn-success btn-lg" style={{ minHeight: "44px" }}>
                   {loading ? <><span className="spinner-sm" style={{ borderTopColor: "#fff" }} /> Verifying...</> : "Confirm & Sign In"}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setStep(1); setError(""); setOtpCode(""); }}
-                  className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem" }}>
+                  className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem", minHeight: "44px" }}>
                   ← Back
                 </button>
               </form>

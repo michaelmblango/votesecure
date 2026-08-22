@@ -29,6 +29,7 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 code {
@@ -201,9 +202,9 @@ code {
 .progress-fill-green { background: var(--confirm); }
 
 /* ── Page shell ──────────────────────────────────────────────── */
-.page { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-.page-narrow { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-.page-tight  { max-width: 480px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+.page { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; overflow-x: hidden; }
+.page-narrow { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem; overflow-x: hidden; }
+.page-tight  { max-width: 480px; margin: 0 auto; padding: 2.5rem 1.5rem; overflow-x: hidden; }
 
 /* ── Section header ──────────────────────────────────────────── */
 .section-header {
@@ -339,4 +340,67 @@ code {
 .audit-col-time { display: none; }
 @media (min-width: 768px) {
   .audit-col-time { display: block; }
+}
+
+/* ── Small-screen utilities ──────────────────────────────────── */
+.word-break-all    { word-break: break-all; }
+.overflow-x-hidden  { overflow-x: hidden; }
+
+/* ── Responsive breakpoint adjustments ──────────────────────────
+   Additive only — does not remove or override any rule above.  */
+@media (max-width: 640px) {
+  .page        { padding: 1.25rem 1rem; }
+  .page-narrow { padding: 1.25rem 1rem; }
+  .page-tight  { padding: 1.25rem 1rem; }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 92vh;
+  }
+
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .btn-lg {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.9375rem;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .text-display { font-size: 1.5rem; }
+  .text-heading  { font-size: 1.25rem; }
+
+  .card {
+    border-radius: 10px;
+  }
 }

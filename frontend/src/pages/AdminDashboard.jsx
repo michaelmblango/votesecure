@@ -541,7 +541,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
+      <div className="stats-grid-4" style={{ gap: "1rem", marginBottom: "2rem" }}>
         {[
           { label: "Total",  value: counts.total,  color: "var(--ink)"     },
           { label: "Live",   value: counts.active, color: "var(--confirm)" },
@@ -581,7 +581,7 @@ export default function AdminDashboard() {
           )}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(320px, 100%), 1fr))", gap: "1.25rem" }}>
           {visible.map(e => <ElectionCard key={e.election_id} election={e} onRefresh={load} />)}
         </div>
       )}
