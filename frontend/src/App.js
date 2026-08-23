@@ -16,6 +16,8 @@ import PricingPage      from "./pages/PricingPage";
 import OrgSignupPage    from "./pages/OrgSignupPage";
 import OrgJoinPage      from "./pages/OrgJoinPage";
 import OrgLoginPage     from "./pages/OrgLoginPage";
+import SuperLoginPage   from "./pages/SuperAdmin/SuperLoginPage";
+import SuperDashboard   from "./pages/SuperAdmin/SuperDashboard";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -99,7 +101,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <Routes>
+          {/* Super admin routes render standalone - no shared public Navbar/footer */}
+          <Route path="/super/login"     element={<SuperLoginPage />} />
+          <Route path="/super/dashboard" element={<SuperDashboard />} />
+          <Route path="/*" element={<AppRoutes />} />
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );
