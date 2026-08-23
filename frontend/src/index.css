@@ -197,6 +197,10 @@ code {
   .audit-detail-grid { grid-template-columns: repeat(1, 1fr); }
 }
 
+/* ElectionCard mini-stat grid: 3 columns fit at every width down to
+   320px (labels max 10 chars at 0.6875rem in an ~85px column) */
+.election-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
 /* ── Progress bar ────────────────────────────────────────────── */
 .progress-track {
   width: 100%;

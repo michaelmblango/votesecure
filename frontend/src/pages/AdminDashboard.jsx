@@ -448,7 +448,7 @@ function ElectionCard({ election, onRefresh }) {
       {election.description && (
         <p className="truncate-2" style={{ fontSize: "0.875rem", color: "var(--slate)", margin: 0, lineHeight: 1.5 }}>{election.description}</p>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+      <div className="election-card-stats">
         {[
           { label: "Positions",  value: election.total_positions  ?? 0 },
           { label: "Votes Cast", value: election.total_votes_cast ?? 0 },
