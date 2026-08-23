@@ -9,7 +9,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
-from database import test_connection
+from database import test_connection, get_connection
 
 # Import all routers (we will fill these files next)
 from routers import auth, elections, votes, analytics
@@ -99,3 +99,31 @@ def detailed_health():
         "status": "healthy" if db_ok else "degraded",
         "database": "connected" if db_ok else "disconnected",
     }
+
+
+# ── Public Stats ──────────────────────────────────────────────
+# Safe, unauthenticated aggregate counts for the public landing
+# page's social-proof section. No PII, no org names, no identifying
+# detail - just totals. (Full detail lives behind /api/super/stats,
+# which requires super-admin auth.)
+@app.get("/api/public/stats", tags=["Public"])
+def public_stats():
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) AS total FROM votes")
+        total_votes = cursor.fetchone()["total"]
+
+        cursor.execute("SELECT COUNT(*) AS total FROM elections")
+        total_elections = cursor.fetchone()["total"]
+
+        cursor.execute("SELECT COUNT(*) AS total FROM organisations WHERE status = 'active'")
+        active_orgs = cursor.fetchone()["total"]
+
+        return {
+            "votes": total_votes,
+            "elections": total_elections,
+            "active_organisations": active_orgs,
+        }
+    finally:
+        cursor.close(); conn.close()

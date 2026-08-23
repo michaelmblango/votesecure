@@ -201,6 +201,20 @@ code {
    320px (labels max 10 chars at 0.6875rem in an ~85px column) */
 .election-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 
+/* Landing page hero: copy stacks above the mockup below 900px,
+   side-by-side from 900px up */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* ── Progress bar ────────────────────────────────────────────── */
 .progress-track {
   width: 100%;

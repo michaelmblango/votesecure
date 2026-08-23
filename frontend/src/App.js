@@ -12,6 +12,7 @@ import ResultsPage      from "./pages/ResultsPage";
 import AuditLogPage     from "./pages/AuditLogPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
+import LandingPage      from "./pages/LandingPage";
 import PricingPage      from "./pages/PricingPage";
 import OrgSignupPage    from "./pages/OrgSignupPage";
 import OrgJoinPage      from "./pages/OrgJoinPage";
@@ -66,33 +67,35 @@ function AppRoutes() {
 
           {/* ── Default ── */}
           <Route path="/" element={
-            <Navigate to={
-              user
-                ? user.role === "voter" ? "/ballot" : "/admin"
-                : "/pricing"
-            } replace/>
+            user
+              ? <Navigate to={user.role === "voter" ? "/ballot" : "/admin"} replace/>
+              : <LandingPage />
           }/>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 
       {/* ── Footer ── */}
-      <footer style={{
-        borderTop: "1px solid var(--border)",
-        background: "#fff",
-        padding: "1.25rem 1.5rem",
-        textAlign: "center",
-        marginTop: "auto",
-      }}>
-        <p style={{ fontSize: "0.8125rem", color: "var(--slate)", margin: 0 }}>
-          VoteSecure · AI Professional College · Department of Computer Science · 2025/2026
-          <Link to="/pricing" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Pricing</Link>
-          <Link to="/org/signup" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Create Organisation</Link>
-        </p>
-        <p style={{ fontSize: "0.75rem", color: "#CBD5E1", margin: "0.25rem 0 0" }}>
-          Secure · Transparent · Auditable
-        </p>
-      </footer>
+      {/* LandingPage has its own dark footer built in, so the shared
+          footer here only shows for logged-in users on their pages. */}
+      {user && (
+        <footer style={{
+          borderTop: "1px solid var(--border)",
+          background: "#fff",
+          padding: "1.25rem 1.5rem",
+          textAlign: "center",
+          marginTop: "auto",
+        }}>
+          <p style={{ fontSize: "0.8125rem", color: "var(--slate)", margin: 0 }}>
+            VoteSecure · AI Professional College · Department of Computer Science · 2025/2026
+            <Link to="/pricing" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Pricing</Link>
+            <Link to="/org/signup" style={{ color: "#94A3B8", fontSize: "0.8125rem", textDecoration: "none", marginLeft: "1rem" }}>Create Organisation</Link>
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "#CBD5E1", margin: "0.25rem 0 0" }}>
+            Secure · Transparent · Auditable
+          </p>
+        </footer>
+      )}
     </div>
   );
 }
