@@ -352,3 +352,111 @@ Use this code in the admin dashboard to activate your election.
 def send_voter_otp(email: str, name: str, otp_code: str) -> bool:
     """Alias for send_otp_email — used by auth routers."""
     return send_otp_email(email, name, otp_code)
+
+
+def send_password_reset_email(email: str, name: str, reset_url: str) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">Dear <strong>{name}</strong>,</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 24px;">
+  We received a request to reset your VoteSecure admin password.
+  Click the button below to set a new password.
+</p>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{reset_url}"
+     style="background:#0D2B55;color:#ffffff;text-decoration:none;
+            padding:14px 32px;border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Reset My Password
+  </a>
+</div>
+<p style="color:#64748B;font-size:13px;margin:0 0 6px;">
+  This link expires in <strong>1 hour</strong>.
+</p>
+<div style="background:#FEF3C7;border-left:4px solid #D97706;border-radius:6px;padding:12px 16px;margin-top:20px;">
+  <p style="color:#92400E;font-size:13px;margin:0;">
+    If you did not request a password reset, you can safely ignore this email.
+    Your password will not change.
+  </p>
+</div>""")
+    text = f"Dear {name},\n\nReset your VoteSecure password:\n{reset_url}\n\nExpires in 1 hour.\n\nIf you did not request this, ignore this email."
+    return _send(email, name, "VoteSecure - Password Reset Request", html, text)
+
+
+def send_approval_request_email(
+    email: str, name: str, org_name: str,
+    action_label: str, approve_url: str,
+    initiated_by: str, expires_hours: int = 48,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">Dear <strong>{name}</strong>,</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 20px;">
+  <strong>{initiated_by}</strong> has requested approval for a sensitive action
+  in <strong>{org_name}</strong>. Your approval is required before this action
+  can be executed.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;border-radius:10px;padding:20px;margin-bottom:24px;">
+  <p style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748B;margin:0 0 8px;">Action Requested</p>
+  <p style="font-size:18px;font-weight:800;color:#0D2B55;margin:0;">{action_label}</p>
+</div>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{approve_url}"
+     style="background:#0D2B55;color:#ffffff;text-decoration:none;
+            padding:14px 32px;border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Review and Vote
+  </a>
+</div>
+<p style="color:#64748B;font-size:13px;">
+  This request expires in <strong>{expires_hours} hours</strong>.
+  One rejection from any admin cancels the action entirely.
+</p>""")
+    text = f"Dear {name},\n\n{initiated_by} requested approval for: {action_label}\n\nReview at: {approve_url}\n\nExpires in {expires_hours} hours."
+    return _send(email, name, f"VoteSecure - Approval Required: {action_label}", html, text)
+
+
+def send_approval_result_email(
+    email: str, name: str, org_name: str,
+    action_label: str, approved: bool,
+) -> bool:
+    status_word = "Approved" if approved else "Rejected"
+    bg_color    = "#DCFCE7" if approved else "#FEE2E2"
+    text_color  = "#065F46" if approved else "#991B1B"
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">Dear <strong>{name}</strong>,</p>
+<div style="background:{bg_color};border-radius:10px;padding:20px;margin-bottom:20px;text-align:center;">
+  <p style="font-size:22px;font-weight:800;color:{text_color};margin:0;">
+    {status_word}: {action_label}
+  </p>
+</div>
+<p style="color:#64748B;font-size:14px;line-height:1.6;">
+  {"All admins approved this action. It has been executed." if approved else "An admin rejected this action. It has been cancelled."}
+</p>""")
+    text = f"Dear {name},\n\n{action_label} was {status_word.lower()} in {org_name}."
+    return _send(email, name, f"VoteSecure - Action {status_word}: {action_label}", html, text)
+
+
+def send_voter_invite_email(
+    email: str, org_name: str,
+    invite_url: str, invited_by: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">Hello,</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 20px;">
+  <strong>{invited_by}</strong> from <strong>{org_name}</strong> has invited you
+  to register as a voter on VoteSecure. Click below to create your account.
+</p>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{invite_url}"
+     style="background:#0D2B55;color:#ffffff;text-decoration:none;
+            padding:14px 32px;border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Accept Invitation
+  </a>
+</div>
+<p style="color:#64748B;font-size:13px;">
+  This invitation expires in <strong>7 days</strong>.
+  Your registration will require approval from organisation administrators
+  before you can vote.
+</p>""")
+    text = f"Hello,\n\nYou have been invited to vote in {org_name}.\n\nRegister at: {invite_url}\n\nExpires in 7 days."
+    return _send(email, org_name, f"You are invited to vote - {org_name}", html, text)

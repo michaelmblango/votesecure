@@ -6,7 +6,7 @@ import random
 import re
 from fastapi import APIRouter, HTTPException, status, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
@@ -16,6 +16,7 @@ from services.auth_service import hash_password, verify_password
 from services.email_service import (
     send_admin_registration_confirmation,
     send_invite_code, send_org_activated, send_admin_otp,
+    send_password_reset_email,
 )
 from config import settings
 
@@ -307,3 +308,107 @@ def get_me(current: dict = Depends(get_current_org_admin)):
         if not admin: raise HTTPException(404, "Not found.")
         d = dict(admin); d.pop("password_hash", None); return d
     finally: cursor.close(); conn.close()
+
+
+# ── FORGOT PASSWORD ───────────────────────────────────────────
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-password")
+def forgot_password(data: ForgotPasswordRequest):
+    """
+    Send a password reset link to an org admin's email.
+    Always returns success to prevent email enumeration attacks.
+    """
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT org_admin_id, full_name, email FROM org_admins WHERE email = %s AND is_active = TRUE",
+            (data.email,)
+        )
+        admin = cursor.fetchone()
+
+        if admin:
+            token = secrets.token_urlsafe(48)
+            cursor.execute(
+                """
+                INSERT INTO password_reset_tokens (admin_id, token)
+                VALUES (%s, %s)
+                """,
+                (str(admin["org_admin_id"]), token)
+            )
+            conn.commit()
+
+            reset_url = f"{settings.PLATFORM_URL}/org/reset-password/{token}"
+            send_password_reset_email(
+                email=admin["email"],
+                name=admin["full_name"],
+                reset_url=reset_url,
+            )
+
+        return {
+            "message": "If an account with that email exists, a password reset link has been sent."
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+    @validator("new_password")
+    def password_strong(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+@router.post("/reset-password")
+def reset_password(data: ResetPasswordRequest):
+    """
+    Reset an org admin password using a valid reset token.
+    """
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT t.token_id, t.admin_id, t.expires_at, t.is_used
+            FROM password_reset_tokens t
+            WHERE t.token = %s
+            """,
+            (data.token,)
+        )
+        token_row = cursor.fetchone()
+
+        if not token_row:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset link.")
+        if token_row["is_used"]:
+            raise HTTPException(status_code=400, detail="This reset link has already been used.")
+        if token_row["expires_at"] < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="This reset link has expired. Request a new one.")
+
+        new_hash = hash_password(data.new_password)
+
+        cursor.execute(
+            "UPDATE org_admins SET password_hash = %s WHERE org_admin_id = %s",
+            (new_hash, str(token_row["admin_id"]))
+        )
+        cursor.execute(
+            "UPDATE password_reset_tokens SET is_used = TRUE WHERE token_id = %s",
+            (str(token_row["token_id"]),)
+        )
+        conn.commit()
+
+        return {"message": "Password reset successfully. You can now log in with your new password."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()

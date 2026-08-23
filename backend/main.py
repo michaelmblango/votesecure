@@ -15,6 +15,7 @@ from database import test_connection, get_connection
 from routers import auth, elections, votes, analytics
 from routers import org_auth, licences
 from routers import super_admin
+from routers import approvals
 
 
 # ── Create the FastAPI app ───────────────────────────────────
@@ -62,6 +63,11 @@ app.include_router(
     super_admin.router,
     prefix="/api/super",
     tags=["Super Admin"]
+)
+app.include_router(
+    approvals.router,
+    prefix="/api/approvals",
+    tags=["Admin Approvals"]
 )
 
 
