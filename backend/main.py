@@ -14,6 +14,7 @@ from database import test_connection
 # Import all routers (we will fill these files next)
 from routers import auth, elections, votes, analytics
 from routers import org_auth, licences
+from routers import super_admin
 
 
 # ── Create the FastAPI app ───────────────────────────────────
@@ -57,6 +58,11 @@ app.include_router(votes.router,     prefix="/api/votes",     tags=["Votes"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(org_auth.router,  prefix="/api/org",      tags=["Organisation Auth"])
 app.include_router(licences.router,  prefix="/api/licences", tags=["Licences and Plans"])
+app.include_router(
+    super_admin.router,
+    prefix="/api/super",
+    tags=["Super Admin"]
+)
 
 
 # ── Startup Event ────────────────────────────────────────────
