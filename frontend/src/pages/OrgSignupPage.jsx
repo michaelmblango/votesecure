@@ -11,6 +11,7 @@ export default function OrgSignupPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [result, setResult]     = useState(null);
+  const [copied, setCopied]     = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -44,39 +45,88 @@ export default function OrgSignupPage() {
   };
 
   if (result) {
+    const inviteLink = `${window.location.origin}/org/join/${result.invite_code}`;
+
     return (
-      <div style={{ minHeight: "100vh", background: "var(--ice)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, var(--navy) 0%, #1251A3 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
         <div style={{ width: "100%", maxWidth: 520 }}>
           <div className="card animate-in" style={{ overflow: "hidden" }}>
+
+            {/* Success header */}
             <div style={{ background: "var(--confirm)", padding: "2.5rem 2rem", textAlign: "center" }}>
               <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎉</div>
               <h2 style={{ color: "#fff", fontWeight: 800, fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
                 Organisation created!
               </h2>
               <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.9375rem", margin: 0 }}>
-                Check your email for your login credentials and invite code.
+                Invite {result.admins_needed} more administrator{result.admins_needed !== 1 ? "s" : ""} to activate your account
               </p>
             </div>
+
             <div style={{ padding: "2rem" }}>
-              <div style={{ background: "var(--ice)", border: "1px solid var(--border)", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--slate)", marginBottom: "0.875rem" }}>
-                  Your invite code
+
+              {/* Step indicator */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--confirm)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.875rem", flexShrink: 0 }}>1</div>
+                <div style={{ flex: 1, height: 2, background: "var(--border)" }} />
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--border)", color: "var(--slate)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.875rem", flexShrink: 0 }}>2</div>
+                <div style={{ flex: 1, height: 2, background: "var(--border)" }} />
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--border)", color: "var(--slate)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.875rem", flexShrink: 0 }}>3</div>
+              </div>
+              <p style={{ fontSize: "0.8125rem", color: "var(--slate)", marginBottom: "1.5rem" }}>
+                You are Admin 1. Share the invite link below with 2 more administrators.
+                Each admin clicks the link, creates their own account, and receives their own login credentials.
+                Your account activates automatically when all 3 have joined.
+              </p>
+
+              {/* Invite link box */}
+              <div style={{ marginBottom: "1.25rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--slate)", marginBottom: "0.5rem" }}>
+                  Admin Invite Link
                 </div>
-                <div style={{ fontFamily: "monospace", fontSize: "1.5rem", fontWeight: 800, color: "var(--navy)", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>
-                  {result.invite_code}
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "stretch" }}>
+                  <div style={{ flex: 1, background: "var(--ice)", border: "1px solid var(--border)", borderRadius: 8, padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.8125rem", color: "var(--ink)", wordBreak: "break-all", lineHeight: 1.5 }}>
+                    {inviteLink}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteLink);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2500);
+                    }}
+                    style={{ flexShrink: 0, padding: "0.75rem 1rem", background: copied ? "var(--confirm)" : "var(--navy)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.8125rem", transition: "background 0.2s", minWidth: 80 }}>
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
                 </div>
-                <p style={{ fontSize: "0.8125rem", color: "var(--slate)", margin: 0 }}>
-                  Share this with {result.admins_needed} more administrator{result.admins_needed !== 1 ? "s" : ""}. They visit <strong>/org/join/{result.invite_code}</strong> to register. Your account activates when all 3 admins have joined.
+                <p style={{ fontSize: "0.75rem", color: "var(--slate)", marginTop: "0.5rem" }}>
+                  Share via WhatsApp, SMS, or email. The link works for all remaining admins.
                 </p>
               </div>
 
+              {/* Email check notice */}
               <div className="alert alert-info" style={{ borderRadius: 8, marginBottom: "1.5rem" }}>
                 <span>📧</span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Check your email</div>
-                  <div style={{ fontSize: "0.8125rem" }}>Your credentials and invite link have been sent to your registered email address.</div>
+                  <div style={{ fontSize: "0.8125rem" }}>Your login credentials and this invite link have been sent to your email address.</div>
                 </div>
               </div>
+
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent("Join our VoteSecure organisation as an admin. Click this link to register: " + inviteLink)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", padding: "0.75rem", background: "#25D366", color: "#fff", borderRadius: 8, textDecoration: "none", fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.75rem" }}>
+                <span style={{ fontSize: "1.125rem" }}>📱</span>
+                Share via WhatsApp
+              </a>
+
+              <a
+                href={`mailto:?subject=${encodeURIComponent("Join VoteSecure as Admin")}&body=${encodeURIComponent("You are invited to join our VoteSecure organisation as an administrator.\n\nClick this link to register:\n" + inviteLink + "\n\nYou will need to create your own username and password.")}`}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", padding: "0.75rem", background: "var(--ice)", border: "1px solid var(--border)", color: "var(--ink)", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+                <span>✉️</span>
+                Share via Email
+              </a>
 
               <Link to="/org/login" style={{ display: "block", textAlign: "center", padding: "0.875rem", background: "var(--navy)", color: "#fff", fontWeight: 700, borderRadius: 8, textDecoration: "none", fontSize: "0.9375rem" }}>
                 Go to Admin Login
