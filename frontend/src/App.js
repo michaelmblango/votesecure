@@ -17,6 +17,8 @@ import PricingPage      from "./pages/PricingPage";
 import OrgSignupPage    from "./pages/OrgSignupPage";
 import OrgJoinPage      from "./pages/OrgJoinPage";
 import OrgLoginPage     from "./pages/OrgLoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage  from "./pages/ResetPasswordPage";
 import SuperLoginPage   from "./pages/SuperAdmin/SuperLoginPage";
 import SuperDashboard   from "./pages/SuperAdmin/SuperDashboard";
 
@@ -64,6 +66,8 @@ function AppRoutes() {
           <Route path="/org/signup" element={<OrgSignupPage />} />
           <Route path="/org/join/:invite_code" element={<OrgJoinPage />} />
           <Route path="/org/login" element={<OrgLoginPage />} />
+          <Route path="/org/forgot-password"       element={<ForgotPasswordPage />} />
+          <Route path="/org/reset-password/:token" element={<ResetPasswordPage />} />
 
           {/* ── Default ── */}
           <Route path="/" element={

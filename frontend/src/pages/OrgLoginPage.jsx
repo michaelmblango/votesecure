@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 export default function OrgLoginPage() {
   const { login } = useAuth();
@@ -88,9 +89,17 @@ export default function OrgLoginPage() {
                   <label className="input-label">Username</label>
                   <input className="input" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="Your admin username" required />
                 </div>
-                <div>
-                  <label className="input-label">Password</label>
-                  <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Your password" required />
+                <PasswordInput
+                  label="Password"
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Your password"
+                  required
+                />
+                <div style={{ textAlign: "right", marginTop: "-0.5rem" }}>
+                  <Link to="/org/forgot-password" style={{ fontSize: "0.8125rem", color: "var(--blue)", textDecoration: "none" }}>
+                    Forgot password?
+                  </Link>
                 </div>
                 <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem", minHeight: "44px" }}>
                   {loading ? "Verifying..." : "Continue"}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -100,17 +101,13 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <div>
-                  <label className="input-label">Password</label>
-                  <input
-                    className="input"
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
+                <PasswordInput
+                  label="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
                 <button type="submit" disabled={loading} className="btn btn-navy btn-lg" style={{ marginTop: "0.25rem", minHeight: "44px" }}>
                   {loading ? <><span className="spinner-sm" style={{ borderTopColor: "#fff" }} /> Verifying...</> : "Continue →"}
                 </button>

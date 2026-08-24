@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import PasswordInput from "../components/PasswordInput";
 
 export default function OrgJoinPage() {
   const { invite_code } = useParams();
   const [form, setForm]     = useState({ full_name: "", username: "", password: "", email: "" });
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [result, setResult]   = useState(null);
@@ -13,6 +15,16 @@ export default function OrgJoinPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); setLoading(true);
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      setLoading(false);
+      return;
+    }
+    if (form.password !== confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/org/join/${invite_code}`, {
         method: "POST",
@@ -85,10 +97,22 @@ export default function OrgJoinPage() {
               <label className="input-label">Username *</label>
               <input className="input" value={form.username} onChange={e => set("username", e.target.value)} placeholder="Choose a unique username" required />
             </div>
-            <div>
-              <label className="input-label">Password *</label>
-              <input className="input" type="password" value={form.password} onChange={e => set("password", e.target.value)} placeholder="Min. 8 characters" required minLength={8} />
-            </div>
+            <PasswordInput
+              label="Password"
+              value={form.password}
+              onChange={e => set("password", e.target.value)}
+              placeholder="Min. 8 characters"
+              required
+              showStrength
+            />
+            <PasswordInput
+              label="Confirm Password"
+              name="confirm_password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
+              required
+            />
             <div>
               <label className="input-label">Email Address *</label>
               <input className="input" type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="Your email for OTP login" required />
