@@ -90,3 +90,12 @@ export const licenceAPI = {
   activate:       (data) => api.post("/licences/activate", data),
   myLicences:     ()     => api.get("/licences/my-licences"),
 };
+
+// ── Admin Approvals ──────────────────────────────────────────
+// The /vote endpoint expects a JSON body ({ vote }), not a query
+// string - matches the VoteRequest model on the backend.
+export const approvalsAPI = {
+  getPending: ()                => api.get("/approvals/pending"),
+  vote:       (requestId, vote) => api.post(`/approvals/${requestId}/vote`, { vote }),
+  initiate:   (data)            => api.post("/approvals/initiate", data),
+};

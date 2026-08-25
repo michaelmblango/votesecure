@@ -10,6 +10,7 @@ import ElectionSetup    from "./pages/ElectionSetup";
 import BallotPage       from "./pages/BallotPage";
 import ResultsPage      from "./pages/ResultsPage";
 import AuditLogPage     from "./pages/AuditLogPage";
+import ApprovalsPage    from "./pages/ApprovalsPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
 import LandingPage      from "./pages/LandingPage";
@@ -59,6 +60,9 @@ function AppRoutes() {
           }/>
           <Route path="/admin/audit" element={
             <ProtectedRoute adminOnly><AuditLogPage /></ProtectedRoute>
+          }/>
+          <Route path="/admin/approvals" element={
+            <ProtectedRoute adminOnly><ApprovalsPage /></ProtectedRoute>
           }/>
 
           {/* ── Organisation / SaaS ── */}

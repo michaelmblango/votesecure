@@ -42,9 +42,10 @@ export default function Navbar() {
   });
 
   const adminLinks = [
-    { to: "/admin",       label: "Dashboard"  },
-    { to: "/results",     label: "Results"    },
-    { to: "/admin/audit", label: "Audit Log"  },
+    { to: "/admin",           label: "Dashboard"  },
+    { to: "/results",         label: "Results"    },
+    { to: "/admin/audit",     label: "Audit Log"  },
+    { to: "/admin/approvals", label: "Approvals"  },
   ];
 
   const voterLinks = [

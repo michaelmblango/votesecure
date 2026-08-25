@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { electionsAPI, licenceAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import ApprovalPanel from "../components/ApprovalPanel";
 
 const STATUS = {
   draft:    { label: "Draft",    cls: "badge-slate", dot: "#94A3B8" },
@@ -527,6 +528,8 @@ export default function AdminDashboard() {
           <span className="badge badge-green" style={{ fontSize: "0.75rem" }}>Active</span>
         </div>
       )}
+
+      <ApprovalPanel adminId={user?.user_id} />
 
       {/* Header */}
       <div className="section-header">
