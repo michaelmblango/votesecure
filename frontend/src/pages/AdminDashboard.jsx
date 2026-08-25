@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { electionsAPI, licenceAPI } from "../services/api";
+import { electionsAPI, licenceAPI, voterInviteAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ApprovalPanel from "../components/ApprovalPanel";
 
@@ -489,11 +489,13 @@ function ElectionCard({ election, onRefresh }) {
 // ── Main Dashboard ────────────────────────────────────────────
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [elections, setElections]   = useState([]);
   const [loading, setLoading]       = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showVoter, setShowVoter]   = useState(false);
   const [filter, setFilter]         = useState("all");
+  const [pendingVoters, setPendingVoters] = useState(0);
 
   const load = async () => {
     try { setLoading(true); const r = await electionsAPI.list(); setElections(r.data.elections || []); }
@@ -501,6 +503,12 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    voterInviteAPI.pendingApprovals()
+      .then(r => setPendingVoters(r.data.pending?.length || 0))
+      .catch(() => {});
+  }, []);
 
   const counts = {
     total:    elections.length,
@@ -539,6 +547,7 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: "flex", gap: "0.625rem" }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setShowVoter(true)}>+ Register Voter</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/voters")}>Invite Voters</button>
           <button className="btn btn-navy btn-sm"  onClick={() => setShowCreate(true)}>+ New Election</button>
         </div>
       </div>
@@ -557,6 +566,27 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {pendingVoters > 0 && (
+        <div
+          className="alert alert-warning animate-in"
+          style={{
+            borderRadius: 10,
+            marginBottom: "1.5rem",
+            cursor: "pointer",
+          }}
+          onClick={() => navigate("/admin/voters")}>
+          <span>👤</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.875rem" }}>
+              {pendingVoters} voter{pendingVoters !== 1 ? "s" : ""} awaiting approval
+            </div>
+            <div style={{ fontSize: "0.8125rem" }}>
+              Click to review and approve voter registrations
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>

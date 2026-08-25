@@ -99,3 +99,13 @@ export const approvalsAPI = {
   vote:       (requestId, vote) => api.post(`/approvals/${requestId}/vote`, { vote }),
   initiate:   (data)            => api.post("/approvals/initiate", data),
 };
+
+// ── Voter Invites ────────────────────────────────────────────
+export const voterInviteAPI = {
+  send:             (data)     => api.post("/voter-invites/send", data),
+  sendBulk:         (data)     => api.post("/voter-invites/send-bulk", data),
+  list:             ()         => api.get("/voter-invites/"),
+  getInviteDetails: (code)     => api.get(`/voter-invites/register/${code}`),
+  pendingApprovals: ()         => api.get("/voter-invites/pending-approvals"),
+  decide:           (id, data) => api.post(`/voter-invites/${id}/decide`, data),
+};

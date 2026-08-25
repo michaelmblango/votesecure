@@ -11,6 +11,8 @@ import BallotPage       from "./pages/BallotPage";
 import ResultsPage      from "./pages/ResultsPage";
 import AuditLogPage     from "./pages/AuditLogPage";
 import ApprovalsPage    from "./pages/ApprovalsPage";
+import VoterRegisterPage   from "./pages/VoterRegisterPage";
+import VoterManagementPage from "./pages/VoterManagementPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
 import LandingPage      from "./pages/LandingPage";
@@ -40,6 +42,9 @@ function AppRoutes() {
           }/>
           {/* Verify is public - no login needed */}
           <Route path="/verify" element={<VerifyVotePage />} />
+          {/* Voter self-registration - no ProtectedRoute, voters access
+              this before they have an account */}
+          <Route path="/voter/register/:code" element={<VoterRegisterPage />} />
 
           {/* ── Voter ── */}
           <Route path="/ballot" element={
@@ -63,6 +68,9 @@ function AppRoutes() {
           }/>
           <Route path="/admin/approvals" element={
             <ProtectedRoute adminOnly><ApprovalsPage /></ProtectedRoute>
+          }/>
+          <Route path="/admin/voters" element={
+            <ProtectedRoute adminOnly><VoterManagementPage /></ProtectedRoute>
           }/>
 
           {/* ── Organisation / SaaS ── */}
