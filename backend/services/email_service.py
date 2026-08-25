@@ -460,3 +460,135 @@ def send_voter_invite_email(
 </p>""")
     text = f"Hello,\n\nYou have been invited to vote in {org_name}.\n\nRegister at: {invite_url}\n\nExpires in 7 days."
     return _send(email, org_name, f"You are invited to vote - {org_name}", html, text)
+
+
+def send_voter_registration_confirmed(
+    email: str, name: str, org_name: str
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 20px;">
+  Your registration with <strong>{org_name}</strong> on VoteSecure
+  has been received successfully. Your account is now pending
+  approval from the organisation administrators.
+</p>
+<div style="background:#FEF3C7;border-left:4px solid #D97706;
+            border-radius:6px;padding:14px 16px;margin-bottom:20px;">
+  <p style="color:#92400E;font-size:13px;margin:0;font-weight:600;">
+    What happens next?
+  </p>
+  <p style="color:#92400E;font-size:13px;margin:8px 0 0;">
+    The administrators will review and approve your registration.
+    You will receive another email once approved. After that you
+    can log in using your student number and password.
+  </p>
+</div>
+<p style="color:#64748B;font-size:13px;">
+  If you did not register on VoteSecure, please ignore this email.
+</p>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"Your registration with {org_name} is pending admin "
+        f"approval. You will be notified once approved."
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - Registration Received: {org_name}",
+        html, text
+    )
+
+
+def send_voter_approved_email(
+    email: str, name: str,
+    org_name: str, login_url: str
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<div style="background:#DCFCE7;border-radius:12px;padding:24px;
+            text-align:center;margin-bottom:24px;">
+  <p style="font-size:28px;margin:0 0 8px;">&#10003;</p>
+  <p style="font-size:18px;font-weight:800;color:#065F46;margin:0;">
+    You are approved to vote!
+  </p>
+  <p style="font-size:13px;color:#059669;margin:8px 0 0;">
+    {org_name}
+  </p>
+</div>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 24px;">
+  Your voter registration has been approved by the organisation
+  administrators. You can now log in and cast your vote.
+</p>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{login_url}"
+     style="background:#0D2B55;color:#ffffff;text-decoration:none;
+            padding:14px 32px;border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Log In and Vote
+  </a>
+</div>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"You are approved to vote in {org_name}.\n\n"
+        f"Log in at: {login_url}"
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - You are Approved to Vote: {org_name}",
+        html, text
+    )
+
+
+def send_admin_voter_approval_needed(
+    admin_email: str, admin_name: str,
+    voter_name: str, voter_email: str,
+    org_name: str, approval_url: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{admin_name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  A new voter has registered and is awaiting your approval
+  for <strong>{org_name}</strong>.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:8px;">
+    Voter Details
+  </div>
+  <div style="font-size:16px;font-weight:800;
+              color:#0D2B55;margin-bottom:4px;">
+    {voter_name}
+  </div>
+  <div style="font-size:13px;color:#64748B;">
+    {voter_email}
+  </div>
+</div>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{approval_url}"
+     style="background:#0D2B55;color:#ffffff;
+            text-decoration:none;padding:14px 32px;
+            border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Review and Approve
+  </a>
+</div>""")
+    text = (
+        f"Dear {admin_name},\n\n"
+        f"{voter_name} ({voter_email}) has registered and needs "
+        f"your approval for {org_name}.\n\n"
+        f"Approve at: {approval_url}"
+    )
+    return _send(
+        admin_email, admin_name,
+        f"VoteSecure - Voter Approval Needed: {voter_name}",
+        html, text
+    )
