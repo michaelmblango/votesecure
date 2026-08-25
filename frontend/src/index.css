@@ -340,24 +340,11 @@ code {
   overflow: hidden;
 }
 
-/* ── Navbar responsive behaviour (plain CSS, no Tailwind) ───────
-   .nav-desktop  - nav links / user info, shown from 640px up
-   .nav-mobile-toggle - hamburger button, shown below 640px
-   .nav-mobile-menu   - dropdown panel, shown below 640px         */
-.nav-desktop { display: none; }
-@media (min-width: 640px) {
-  .nav-desktop { display: flex; }
-}
-
-.nav-mobile-toggle { display: inline-flex; }
-@media (min-width: 640px) {
-  .nav-mobile-toggle { display: none; }
-}
-
-.nav-mobile-menu { display: flex; flex-direction: column; }
-@media (min-width: 640px) {
-  .nav-mobile-menu { display: none; }
-}
+/* ── Navbar responsive behaviour ─────────────────────────────────
+   Structural show/hide (desktop nav vs. mobile hamburger/menu) is
+   now handled in JS by Navbar.jsx via useWindowSize, not CSS -
+   see frontend/src/hooks/useWindowSize.js. The rules below are
+   cosmetic-only (link padding), not structural. */
 
 /* Center nav-links list only (not the right-side user-info/CTA area,
    which also uses .nav-desktop but shouldn't be squeezed by this) -
