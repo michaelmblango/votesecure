@@ -359,6 +359,17 @@ code {
   .nav-mobile-menu { display: none; }
 }
 
+/* Center nav-links list only (not the right-side user-info/CTA area,
+   which also uses .nav-desktop but shouldn't be squeezed by this) -
+   base padding here, tightened below 900px so 4 admin links
+   (Dashboard/Results/Audit Log/Approvals) don't crowd the navbar
+   on medium screens. */
+.nav-link-item { padding: 0.5rem 0.75rem; }
+@media (max-width: 900px) {
+  .nav-links-list { gap: 0.125rem; }
+  .nav-link-item  { padding: 0.5rem 0.5rem; }
+}
+
 /* ── Audit log responsive columns ───────────────────────────────
    .audit-col-actor - shown from 640px up
    .audit-col-time  - shown from 768px up                        */

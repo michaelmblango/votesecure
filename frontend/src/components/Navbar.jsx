@@ -19,7 +19,6 @@ export default function Navbar() {
 
   const linkStyle = (path) => ({
     display: "block",
-    padding: "0.5rem 0.75rem",
     borderRadius: 8,
     textDecoration: "none",
     fontSize: "0.875rem",
@@ -57,7 +56,6 @@ export default function Navbar() {
   const publicLinks = [
     { to: "/pricing",    label: "Pricing"      },
     { to: "/org/login",  label: "Admin Sign In" },
-    { to: "/login",      label: "Voter Sign In" },
   ];
 
   const navLinks = user
@@ -105,9 +103,9 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav links — hidden below 640px via CSS class */}
-          <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: "0.25rem", flex: 1 }}>
+          <div className="nav-desktop nav-links-list" style={{ display: "flex", alignItems: "center", gap: "0.25rem", flex: 1 }}>
             {navLinks.map(({ to, label }) => (
-              <Link key={to} to={to} style={linkStyle(to)}>{label}</Link>
+              <Link key={to} to={to} className="nav-link-item" style={linkStyle(to)}>{label}</Link>
             ))}
           </div>
 
@@ -124,7 +122,6 @@ export default function Navbar() {
             </div>
           ) : (
             <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto", flexShrink: 0 }}>
-              <Link to="/org/login" style={linkStyle("/org/login")}>Admin</Link>
               <Link to="/login" className="btn btn-navy btn-sm">Voter Login</Link>
             </div>
           )}
@@ -140,7 +137,7 @@ export default function Navbar() {
               border: "1px solid var(--border)",
               borderRadius: 8,
               width: 40, height: 40,
-              display: "flex", alignItems: "center", justifyContent: "center",
+              alignItems: "center", justifyContent: "center",
               cursor: "pointer", flexShrink: 0,
               color: "var(--ink)",
             }}>
