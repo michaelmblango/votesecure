@@ -53,7 +53,12 @@ class ApprovalDecision(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────
 def make_invite_code() -> str:
-    return secrets.token_urlsafe(32)
+    # voter_invites.invite_code is VARCHAR(40). token_urlsafe(32)
+    # produces 43 characters and overflows that column - 24 bytes
+    # produces exactly 32 characters (still 192 bits of entropy,
+    # comfortably more than enough for an invite code) with room
+    # to spare under the limit.
+    return secrets.token_urlsafe(24)
 
 
 # ════════════════════════════════════════════════════════════════
