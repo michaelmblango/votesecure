@@ -121,7 +121,15 @@ CREATE TABLE elections (
     -- Which admin created this election
     created_by       UUID REFERENCES users(user_id),
     created_at       TIMESTAMP DEFAULT NOW(),
-    updated_at       TIMESTAMP DEFAULT NOW()
+    updated_at       TIMESTAMP DEFAULT NOW(),
+
+    -- SaaS org licence snapshot (added in migration 003).
+    -- licence_id has no inline FK here because election_licences
+    -- is defined later in this file - see the ALTER TABLE near
+    -- the election_licences definition below.
+    max_voters       INT,
+    plan_name        VARCHAR(100),
+    licence_id       UUID
 );
 
 CREATE INDEX idx_elections_status     ON elections(status);
@@ -386,11 +394,21 @@ CREATE TABLE election_licences (
     status           VARCHAR(20) NOT NULL DEFAULT 'unused', -- unused | used | expired | revoked
     notes            TEXT,
     used_at          TIMESTAMP,
-    created_at       TIMESTAMP DEFAULT NOW()
+    created_at       TIMESTAMP DEFAULT NOW(),
+
+    -- Added in migration 003
+    used_by          UUID,
+    election_id      UUID REFERENCES elections(election_id)
 );
 
 CREATE INDEX idx_election_licences_org  ON election_licences(org_id);
 CREATE INDEX idx_election_licences_code ON election_licences(licence_code);
+
+-- Deferred FK from elections.licence_id (elections is defined
+-- earlier in this file, before this table exists) - see migration 003.
+ALTER TABLE elections
+    ADD CONSTRAINT fk_elections_licence
+    FOREIGN KEY (licence_id) REFERENCES election_licences(licence_id);
 
 
 -- ============================================================
