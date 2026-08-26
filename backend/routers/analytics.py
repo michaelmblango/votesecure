@@ -246,7 +246,7 @@ def get_public_results(election_id: str):
             """
             SELECT election_id, title, description, status,
                    election_type, start_time, end_time,
-                   is_public_results, org_id
+                   is_public_results
             FROM elections
             WHERE election_id = %s
             """,
@@ -266,15 +266,11 @@ def get_public_results(election_id: str):
                 detail="Results for this election are not yet public."
             )
 
+        # NOTE: elections are not linked to an organisation in the
+        # current schema (org_id exists only on org_admins and
+        # election_licences, neither of which reference election_id),
+        # so there is no org name to attach here.
         org_name = None
-        if election["org_id"]:
-            cursor.execute(
-                "SELECT org_name FROM organisations WHERE org_id = %s",
-                (str(election["org_id"]),)
-            )
-            org = cursor.fetchone()
-            if org:
-                org_name = org["org_name"]
 
         cursor.execute(
             """
