@@ -510,7 +510,11 @@ def update_candidate_status(
             WHERE candidate_id = %s
             RETURNING *
             """,
-            (data.approval_status, current_user["sub"], candidate_id)
+            (
+                data.approval_status,
+                current_user.get("user_id") or current_user["sub"],
+                candidate_id,
+            )
         )
         updated = cursor.fetchone()
         if not updated:
