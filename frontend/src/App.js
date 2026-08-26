@@ -24,6 +24,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage  from "./pages/ResetPasswordPage";
 import SuperLoginPage   from "./pages/SuperAdmin/SuperLoginPage";
 import SuperDashboard   from "./pages/SuperAdmin/SuperDashboard";
+import PublicResultsPage from "./pages/PublicResultsPage";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -124,6 +125,8 @@ export default function App() {
           {/* Super admin routes render standalone - no shared public Navbar/footer */}
           <Route path="/super/login"     element={<SuperLoginPage />} />
           <Route path="/super/dashboard" element={<SuperDashboard />} />
+          {/* Public results share page - standalone, no navbar/footer, no auth */}
+          <Route path="/results/public/:election_id" element={<PublicResultsPage />} />
           <Route path="/*" element={<AppRoutes />} />
         </Routes>
       </AuthProvider>

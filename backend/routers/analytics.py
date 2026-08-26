@@ -230,3 +230,182 @@ def get_audit_logs(
     finally:
         cursor.close()
         conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# PUBLIC RESULTS SHARING
+# No authentication required. Results are visible if the
+# election is closed/archived, or if is_public_results = TRUE.
+# ════════════════════════════════════════════════════════════
+@router.get("/public/results/{election_id}")
+def get_public_results(election_id: str):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT election_id, title, description, status,
+                   election_type, start_time, end_time,
+                   is_public_results, org_id
+            FROM elections
+            WHERE election_id = %s
+            """,
+            (election_id,)
+        )
+        election = cursor.fetchone()
+        if not election:
+            raise HTTPException(status_code=404, detail="Election not found.")
+
+        can_view = (
+            election["status"] in ("closed", "archived") or
+            election["is_public_results"] == True
+        )
+        if not can_view:
+            raise HTTPException(
+                status_code=403,
+                detail="Results for this election are not yet public."
+            )
+
+        org_name = None
+        if election["org_id"]:
+            cursor.execute(
+                "SELECT org_name FROM organisations WHERE org_id = %s",
+                (str(election["org_id"]),)
+            )
+            org = cursor.fetchone()
+            if org:
+                org_name = org["org_name"]
+
+        cursor.execute(
+            """
+            SELECT p.position_id, p.position_name, p.description,
+                   p.display_order
+            FROM positions p
+            WHERE p.election_id = %s
+            ORDER BY p.display_order, p.position_name
+            """,
+            (election_id,)
+        )
+        positions = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT voter_id) AS total
+            FROM voter_election_status
+            WHERE election_id = %s
+            """,
+            (election_id,)
+        )
+        total_registered = cursor.fetchone()["total"] or 0
+
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT voter_id) AS voted
+            FROM voter_election_status
+            WHERE election_id = %s AND has_voted = TRUE
+            """,
+            (election_id,)
+        )
+        total_voted = cursor.fetchone()["voted"] or 0
+
+        results_positions = []
+        for pos in positions:
+            pos_id = str(pos["position_id"])
+
+            cursor.execute(
+                """
+                SELECT
+                    c.candidate_id,
+                    c.display_name AS candidate_name,
+                    c.manifesto,
+                    COUNT(v.vote_id) AS vote_count
+                FROM candidates c
+                LEFT JOIN votes v
+                    ON v.candidate_id = c.candidate_id
+                    AND v.position_id = c.position_id
+                WHERE c.position_id = %s
+                  AND c.approval_status = 'approved'
+                GROUP BY c.candidate_id, c.display_name, c.manifesto
+                ORDER BY vote_count DESC, c.display_name
+                """,
+                (pos_id,)
+            )
+            candidates = cursor.fetchall()
+
+            total_pos_votes = sum(c["vote_count"] for c in candidates)
+
+            candidates_out = []
+            winner = None
+            for c in candidates:
+                pct = round(
+                    (c["vote_count"] / total_pos_votes * 100)
+                    if total_pos_votes > 0 else 0,
+                    1
+                )
+                candidates_out.append({
+                    "candidate_id":   str(c["candidate_id"]),
+                    "candidate_name": c["candidate_name"],
+                    "vote_count":     c["vote_count"],
+                    "percentage":     pct,
+                })
+                if not winner and c["vote_count"] > 0:
+                    winner = c["candidate_name"]
+
+            results_positions.append({
+                "position_id":   pos_id,
+                "position_name": pos["position_name"],
+                "total_votes":   total_pos_votes,
+                "winner":        winner,
+                "candidates":    candidates_out,
+            })
+
+        turnout_pct = round(
+            (total_voted / total_registered * 100)
+            if total_registered > 0 else 0,
+            1
+        )
+
+        return {
+            "election_id":       election_id,
+            "election_title":    election["title"],
+            "election_status":   election["status"],
+            "election_type":     election["election_type"],
+            "org_name":          org_name,
+            "start_time":        str(election["start_time"]) if election["start_time"] else None,
+            "end_time":          str(election["end_time"])   if election["end_time"]   else None,
+            "total_votes_cast":  total_voted,
+            "total_registered":  total_registered,
+            "turnout_percent":   turnout_pct,
+            "is_live":           election["status"] == "active",
+            "positions":         results_positions,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()
+
+
+@router.get("/public/election/{election_id}/check")
+def check_election_public(election_id: str):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT title, status, is_public_results
+            FROM elections WHERE election_id = %s
+            """,
+            (election_id,)
+        )
+        e = cursor.fetchone()
+        if not e:
+            raise HTTPException(status_code=404, detail="Election not found.")
+        return {
+            "title":      e["title"],
+            "status":     e["status"],
+            "is_public":  e["status"] in ("closed", "archived") or e["is_public_results"],
+        }
+    finally:
+        cursor.close(); conn.close()

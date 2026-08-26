@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { electionsAPI, analyticsAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -81,6 +82,8 @@ function ElectionResults({ election, onBack, isAdmin }) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
+  const [copied, setCopied]   = useState(false);
+  const shareUrl = `${window.location.origin}/results/public/${election.election_id}`;
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +124,43 @@ function ElectionResults({ election, onBack, isAdmin }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div style={{
+        display: "flex", gap: "0.5rem", marginBottom: "1.5rem",
+        alignItems: "center", flexWrap: "wrap",
+      }}>
+        <span style={{ fontSize: "0.8125rem", color: "var(--slate)",
+                       fontWeight: 500 }}>
+          Share results:
+        </span>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(shareUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+          }}
+          className="btn btn-ghost btn-sm">
+          {copied ? "✓ Copied!" : "Copy Public Link"}
+        </button>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(
+            `Results: ${results.election_title}\n${shareUrl}`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-sm"
+          style={{ background: "#25D366", color: "#fff",
+                   border: "none", textDecoration: "none" }}>
+          📱 Share on WhatsApp
+        </a>
+        <Link
+          to={`/results/public/${election.election_id}`}
+          target="_blank"
+          className="btn btn-ghost btn-sm"
+          style={{ textDecoration: "none" }}>
+          Open Public Page
+        </Link>
       </div>
 
       {isAdmin && <TurnoutPanel electionId={election.election_id} />}

@@ -75,6 +75,13 @@ export const analyticsAPI = {
   auditLogs: (limit = 50)  => api.get(`/analytics/audit-logs?limit=${limit}`),
 };
 
+// ── Public Results (no auth) ─────────────────────────────────
+export const publicAPI = {
+  results: (electionId) =>
+    fetch(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/analytics/public/results/${electionId}`)
+      .then(r => r.json()),
+};
+
 export const orgAPI = {
   signup:    (data)         => api.post("/org/signup", data),
   join:      (code, data)   => api.post(`/org/join/${code}`, data),
