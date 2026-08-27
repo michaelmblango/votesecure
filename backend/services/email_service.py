@@ -543,6 +543,43 @@ def send_voter_approved_email(
     )
 
 
+def send_election_open_email(
+    email: str, name: str,
+    election_title: str, org_name: str, ballot_url: str,
+) -> bool:
+    """Notify an eligible voter that an election has opened and is ready for their vote."""
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 20px;">
+  Voting is now open for <strong>{election_title}</strong>
+  {f"({org_name})" if org_name else ""}. You are eligible to vote
+  and your ballot is ready.
+</p>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{ballot_url}"
+     style="background:#0D2B55;color:#ffffff;text-decoration:none;
+            padding:14px 32px;border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Go to My Ballot
+  </a>
+</div>
+<p style="color:#64748B;font-size:13px;">
+  Log in with your student number and password to cast your vote.
+</p>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"Voting is now open for {election_title}.\n\n"
+        f"Vote at: {ballot_url}"
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - Voting Now Open: {election_title}",
+        html, text
+    )
+
+
 def send_admin_voter_approval_needed(
     admin_email: str, admin_name: str,
     voter_name: str, voter_email: str,

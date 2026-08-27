@@ -29,6 +29,8 @@ from models.election import (
     PositionCreate, CandidateCreate, CandidateStatusUpdate,
 )
 from dependencies import get_current_user, require_admin
+from config import settings
+from services.email_service import send_election_open_email
 
 router = APIRouter()
 
@@ -293,6 +295,28 @@ def update_election_status(
             )
         )
         conn.commit()
+
+        # Notify eligible voters once the election opens
+        if data.status == "active":
+            cursor.execute(
+                """
+                SELECT u.email, u.full_name
+                FROM voters v
+                JOIN users u ON v.user_id = u.user_id
+                WHERE u.is_active = TRUE
+                  AND (%s IS NULL OR v.eligibility_group = %s)
+                """,
+                (election["eligible_group"], election["eligible_group"])
+            )
+            ballot_url = f"{settings.PLATFORM_URL}/ballot"
+            for voter in cursor.fetchall():
+                send_election_open_email(
+                    email=voter["email"],
+                    name=voter["full_name"],
+                    election_title=election["title"],
+                    org_name=None,
+                    ballot_url=ballot_url,
+                )
 
         return {
             "message":  f"Election status updated to '{data.status}'.",
