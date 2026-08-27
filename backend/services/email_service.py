@@ -543,20 +543,35 @@ def send_voter_approved_email(
     )
 
 
-def send_election_open_email(
-    email: str, name: str,
-    election_title: str, org_name: str, ballot_url: str,
+def send_election_open_notification(
+    email: str,
+    name: str,
+    election_title: str,
+    org_name: str,
+    end_time: str,
+    ballot_url: str,
 ) -> bool:
     """Notify an eligible voter that an election has opened and is ready for their vote."""
     html = _shell(f"""
 <p style="color:#374151;font-size:15px;margin:0 0 16px;">
   Dear <strong>{name}</strong>,
 </p>
-<p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 20px;">
-  Voting is now open for <strong>{election_title}</strong>
-  {f"({org_name})" if org_name else ""}. You are eligible to vote
-  and your ballot is ready.
+<div style="background:#DCFCE7;border-radius:12px;padding:24px;
+            text-align:center;margin-bottom:24px;">
+  <p style="font-size:28px;margin:0 0 8px;">&#128499;&#65039;</p>
+  <p style="font-size:20px;font-weight:800;color:#065F46;margin:0;">
+    Voting is now open!
+  </p>
+  <p style="font-size:13px;color:#059669;margin:8px 0 0;">
+    {org_name}
+  </p>
+</div>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 12px;">
+  The election <strong>{election_title}</strong> is now open
+  and your vote is ready to be cast.
 </p>
+{f'<p style="color:#64748B;font-size:13px;margin:0 0 24px;">Voting closes: <strong>{end_time}</strong></p>' if end_time else ''}
 <div style="text-align:center;margin:28px 0;">
   <a href="{ballot_url}"
      style="background:#0D2B55;color:#ffffff;text-decoration:none;
@@ -565,17 +580,23 @@ def send_election_open_email(
     Go to My Ballot
   </a>
 </div>
-<p style="color:#64748B;font-size:13px;">
-  Log in with your student number and password to cast your vote.
-</p>""")
+<div style="background:#FEF3C7;border-left:4px solid #D97706;
+            border-radius:6px;padding:12px 16px;margin-top:20px;">
+  <p style="color:#92400E;font-size:13px;margin:0;">
+    Your vote is anonymous. Once cast it cannot be changed.
+    Each eligible voter may vote once per position.
+  </p>
+</div>""")
     text = (
         f"Dear {name},\n\n"
-        f"Voting is now open for {election_title}.\n\n"
-        f"Vote at: {ballot_url}"
+        f"Voting is now open for {election_title} — {org_name}.\n\n"
+        f"Cast your vote at: {ballot_url}\n\n"
+        f"{'Voting closes: ' + end_time if end_time else ''}\n\n"
+        f"Your vote is anonymous and cannot be changed once cast."
     )
     return _send(
         email, name,
-        f"VoteSecure - Voting Now Open: {election_title}",
+        f"Voting is now open: {election_title}",
         html, text
     )
 

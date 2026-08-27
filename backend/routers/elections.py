@@ -22,6 +22,7 @@
 #        - List all candidates in an election
 # ============================================================
 
+import threading
 from fastapi import APIRouter, HTTPException, status, Depends
 from database import get_connection
 from models.election import (
@@ -30,7 +31,7 @@ from models.election import (
 )
 from dependencies import get_current_user, require_admin
 from config import settings
-from services.email_service import send_election_open_email
+from services.email_service import send_election_open_notification
 
 router = APIRouter()
 
@@ -296,27 +297,59 @@ def update_election_status(
         )
         conn.commit()
 
-        # Notify eligible voters once the election opens
+        # Notify eligible voters once the election opens.
+        # Sent from a background thread so the status-update response
+        # doesn't block on a loop of blocking SMTP calls.
         if data.status == "active":
-            cursor.execute(
-                """
-                SELECT u.email, u.full_name
-                FROM voters v
-                JOIN users u ON v.user_id = u.user_id
-                WHERE u.is_active = TRUE
-                  AND (%s IS NULL OR v.eligibility_group = %s)
-                """,
-                (election["eligible_group"], election["eligible_group"])
-            )
-            ballot_url = f"{settings.PLATFORM_URL}/ballot"
-            for voter in cursor.fetchall():
-                send_election_open_email(
-                    email=voter["email"],
-                    name=voter["full_name"],
-                    election_title=election["title"],
-                    org_name=None,
-                    ballot_url=ballot_url,
+            try:
+                cursor.execute(
+                    """
+                    SELECT u.email, u.full_name
+                    FROM voters v
+                    JOIN users u ON v.user_id = u.user_id
+                    WHERE u.is_active = TRUE
+                      AND (%s IS NULL OR v.eligibility_group = %s)
+                    """,
+                    (election["eligible_group"], election["eligible_group"])
                 )
+                eligible_voters = cursor.fetchall()
+
+                end_time_str = None
+                if election["end_time"]:
+                    end_time_str = election["end_time"].strftime("%d %B %Y at %H:%M")
+
+                ballot_url = f"{settings.PLATFORM_URL}/ballot"
+                # No org linkage exists on elections - see the same
+                # note in analytics.py's public results endpoint.
+                org_name = "VoteSecure"
+
+                def send_notifications(voters, title, org, end_t, url):
+                    sent = 0
+                    for voter in voters:
+                        try:
+                            send_election_open_notification(
+                                email=voter["email"],
+                                name=voter["full_name"],
+                                election_title=title,
+                                org_name=org,
+                                end_time=end_t,
+                                ballot_url=url,
+                            )
+                            sent += 1
+                        except Exception:
+                            pass
+                    print(f"Election open: notified {sent}/{len(voters)} voters")
+
+                threading.Thread(
+                    target=send_notifications,
+                    args=(eligible_voters, election["title"], org_name, end_time_str, ballot_url),
+                    daemon=True,
+                ).start()
+
+                print(f"Election opened: sending notifications to {len(eligible_voters)} voters in background")
+            except Exception as notify_err:
+                # Never let notification failure block the status update
+                print(f"Voter notification error: {notify_err}")
 
         return {
             "message":  f"Election status updated to '{data.status}'.",
