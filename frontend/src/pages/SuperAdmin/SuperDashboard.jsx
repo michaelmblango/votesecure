@@ -181,6 +181,114 @@ function OrgRow({ org, plans, onRefresh }) {
   );
 }
 
+function PaymentRow({ payment, onUpdate }) {
+  const [busy, setBusy] = useState(false);
+
+  const updateStatus = async (newStatus) => {
+    setBusy(true);
+    try {
+      await superFetch(
+        `/payments/${payment.payment_id}/status`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+      onUpdate();
+    } catch {}
+    finally { setBusy(false); }
+  };
+
+  const statusBadge = {
+    submitted:    "badge-amber",
+    under_review: "badge-blue",
+    verified:     "badge-green",
+    rejected:     "badge-red",
+  }[payment.status] || "badge-slate";
+
+  return (
+    <tr>
+      <td>
+        <div style={{ fontWeight: 600 }}>{payment.org_name}</div>
+        <div style={{ fontSize: "0.75rem", color: "var(--slate)" }}>
+          {payment.admin_name}
+        </div>
+        <div style={{ fontSize: "0.75rem", color: "var(--slate)" }}>
+          {payment.admin_email}
+        </div>
+      </td>
+      <td>
+        <span className="badge badge-blue"
+              style={{ textTransform: "capitalize" }}>
+          {payment.plan_name}
+        </span>
+      </td>
+      <td style={{ fontWeight: 700 }}>
+        ${Number(payment.amount_usd).toFixed(2)}
+      </td>
+      <td style={{
+        fontSize: "0.8125rem", color: "var(--slate)",
+        maxWidth: 160, overflow: "hidden",
+        textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        {payment.payment_reference}
+      </td>
+      <td style={{ fontSize: "0.8125rem", color: "var(--slate)" }}>
+        {new Date(payment.created_at).toLocaleDateString("en-GB")}
+      </td>
+      <td>
+        <span className={`badge ${statusBadge}`}
+              style={{ textTransform: "capitalize" }}>
+          {payment.status.replace(/_/g, " ")}
+        </span>
+      </td>
+      <td>
+        <div style={{ display: "flex", gap: "0.375rem",
+                      flexWrap: "wrap" }}>
+          {payment.status === "submitted" && (
+            <button
+              className="btn btn-primary btn-sm"
+              disabled={busy}
+              onClick={() => updateStatus("under_review")}>
+              Review
+            </button>
+          )}
+          {payment.status === "under_review" && (
+            <>
+              <button
+                className="btn btn-success btn-sm"
+                disabled={busy}
+                onClick={() => updateStatus("verified")}>
+                Verify
+              </button>
+              <button
+                className="btn btn-danger btn-sm"
+                disabled={busy}
+                onClick={() => updateStatus("rejected")}>
+                Reject
+              </button>
+            </>
+          )}
+          {payment.status === "verified" && !payment.licence_code && (
+            <span style={{ fontSize: "0.75rem",
+                           color: "var(--slate)" }}>
+              Generate licence in Orgs tab
+            </span>
+          )}
+          {payment.licence_code && (
+            <span style={{
+              fontFamily: "monospace", fontSize: "0.8125rem",
+              fontWeight: 700, color: "var(--confirm)",
+            }}>
+              {payment.licence_code}
+            </span>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function SuperDashboard() {
   const navigate = useNavigate();
   const [stats,   setStats]   = useState(null);
@@ -189,6 +297,8 @@ export default function SuperDashboard() {
   const [plans,   setPlans]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab,     setTab]     = useState("orgs");
+  const [payments,  setPayments]  = useState([]);
+  const [payFilter, setPayFilter] = useState("submitted");
 
   const load = useCallback(async () => {
     const token = localStorage.getItem("vs_super_token");
@@ -216,6 +326,16 @@ export default function SuperDashboard() {
   }, [navigate]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadPayments = useCallback(async () => {
+    try {
+      const res = await superFetch(`/payments?status=${payFilter}`);
+      const d   = await res.json();
+      setPayments(d.payments || []);
+    } catch {}
+  }, [payFilter]);
+
+  useEffect(() => { loadPayments(); }, [loadPayments]);
 
   const handleLogout = () => {
     localStorage.removeItem("vs_super_token");
@@ -267,6 +387,7 @@ export default function SuperDashboard() {
             { key: "orgs",     label: "Organisations" },
             { key: "licences", label: "Licences"      },
             { key: "plans",    label: "Plans"         },
+            { key: "payments", label: "Payments"      },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               style={{
@@ -377,6 +498,61 @@ export default function SuperDashboard() {
                 <div style={{ fontSize: "0.8125rem", color: "var(--slate)", marginTop: "0.25rem" }}>{p.description}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Payments tab */}
+        {tab === "payments" && (
+          <div>
+            <div style={{ display: "flex", gap: "0.5rem",
+                          marginBottom: "1.5rem", flexWrap: "wrap",
+                          alignItems: "center" }}>
+              {["submitted","under_review","verified","rejected"].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setPayFilter(s)}
+                  className={`btn btn-sm ${
+                    payFilter === s ? "btn-navy" : "btn-ghost"
+                  }`}
+                  style={{ textTransform: "capitalize" }}>
+                  {s.replace(/_/g, " ")}
+                </button>
+              ))}
+              <button
+                onClick={loadPayments}
+                className="btn btn-ghost btn-sm"
+                style={{ marginLeft: "auto" }}>
+                Refresh
+              </button>
+            </div>
+            <div className="card" style={{ overflow: "hidden" }}>
+              {payments.length === 0 ? (
+                <div style={{ padding: "3rem", textAlign: "center", color: "var(--slate)" }}>
+                  No {payFilter.replace(/_/g, " ")} payments.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="data-table" style={{ minWidth: 760 }}>
+                    <thead>
+                      <tr>
+                        <th>Organisation</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map(p => (
+                        <PaymentRow key={p.payment_id} payment={p} onUpdate={loadPayments} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

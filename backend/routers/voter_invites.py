@@ -522,6 +522,39 @@ def decide_voter(
             conn.commit()
             return {"status": "rejected", "message": f"{invite['voter_name']} has been rejected."}
 
+        # ── Free tier voter limit enforcement (org-scoped) ─────
+        org_id = current["org"]
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT voter_id) AS cnt
+            FROM voter_invites
+            WHERE org_id = %s
+              AND status = 'approved'
+              AND voter_id IS NOT NULL
+            """,
+            (org_id,)
+        )
+        current_count = cursor.fetchone()["cnt"]
+        if current_count >= 10:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS cnt
+                FROM election_licences
+                WHERE org_id = %s AND status = 'unused'
+                """,
+                (org_id,)
+            )
+            has_licence = cursor.fetchone()["cnt"] > 0
+            if not has_licence:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"Free plan limit reached "
+                        f"({current_count} approved voters). "
+                        f"Purchase a licence to approve more voters."
+                    )
+                )
+
         # Check how many approvals we have now
         cursor.execute(
             "SELECT COUNT(*) AS cnt FROM voter_invite_approvals WHERE invite_id = %s AND approved = TRUE",

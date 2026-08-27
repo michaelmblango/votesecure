@@ -84,6 +84,9 @@ class GenerateLicence(BaseModel):
 class OrgAction(BaseModel):
     action: str  # "activate" | "suspend" | "reactivate"
 
+class PaymentStatusUpdate(BaseModel):
+    status: str  # "submitted" | "under_review" | "verified" | "rejected"
+
 
 # ════════════════════════════════════════════════════════════════
 # LOGIN
@@ -414,6 +417,87 @@ def update_plan(plan_name: str, data: PlanUpdate, current: dict = Depends(get_su
             raise HTTPException(status_code=404, detail="Plan not found.")
         conn.commit()
         return {"message": "Plan updated.", "plan": dict(updated)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()
+
+
+# ════════════════════════════════════════════════════════════════
+# LIST PAYMENT REQUESTS
+# ════════════════════════════════════════════════════════════════
+@router.get("/payments")
+def list_payments(
+    status: str = "submitted",
+    current: dict = Depends(get_super_admin),
+):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT
+                pr.*,
+                o.org_name,
+                a.full_name  AS admin_name,
+                a.email      AS admin_email,
+                l.licence_code
+            FROM payment_requests pr
+            JOIN organisations     o ON pr.org_id      = o.org_id
+            JOIN org_admins        a ON pr.org_admin_id = a.org_admin_id
+            LEFT JOIN election_licences l ON pr.licence_id = l.licence_id
+            WHERE pr.status = %s
+            ORDER BY pr.created_at DESC
+            """,
+            (status,)
+        )
+        payments = cursor.fetchall()
+        return {"payments": [dict(p) for p in payments]}
+    finally:
+        cursor.close(); conn.close()
+
+
+# ════════════════════════════════════════════════════════════════
+# UPDATE PAYMENT STATUS
+# ════════════════════════════════════════════════════════════════
+@router.patch("/payments/{payment_id}/status")
+def update_payment_status(
+    payment_id: str,
+    data: PaymentStatusUpdate,
+    current: dict = Depends(get_super_admin),
+):
+    allowed = ("submitted", "under_review", "verified", "rejected")
+    if data.status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Status must be one of: {allowed}"
+        )
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE payment_requests
+            SET status = %s, reviewed_at = NOW()
+            WHERE payment_id = %s
+            RETURNING payment_id, org_id, plan_name, status
+            """,
+            (data.status, payment_id)
+        )
+        updated = cursor.fetchone()
+        if not updated:
+            raise HTTPException(
+                status_code=404,
+                detail="Payment not found."
+            )
+        conn.commit()
+        return {
+            "message": f"Status updated to {data.status}",
+            "payment": dict(updated),
+        }
     except HTTPException:
         raise
     except Exception as e:

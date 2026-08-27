@@ -601,6 +601,98 @@ def send_election_open_notification(
     )
 
 
+def send_payment_receipt_confirmation(
+    email: str,
+    name: str,
+    org_name: str,
+    plan_name: str,
+    amount_usd: float,
+    payment_reference: str,
+    payment_id: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  We have received your payment receipt for
+  <strong>{org_name}</strong>. Our team will verify your
+  payment and send your licence code within one business day.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:12px;">
+    Payment Summary
+  </div>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:6px 0;">
+        Plan
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;text-transform:capitalize;">
+        {plan_name}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:6px 0;">
+        Amount
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;">
+        ${amount_usd:.2f} USD
+      </td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:6px 0;">
+        Reference
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;">
+        {payment_reference}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:6px 0;">
+        Tracking ID
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;font-family:monospace;">
+        {payment_id[:8].upper()}
+      </td>
+    </tr>
+  </table>
+</div>
+<div style="background:#DCFCE7;border-left:4px solid #059669;
+            border-radius:6px;padding:14px 16px;">
+  <p style="color:#065F46;font-size:13px;margin:0;
+            font-weight:600;">
+    What happens next?
+  </p>
+  <p style="color:#065F46;font-size:13px;margin:8px 0 0;">
+    Once verified we will email your licence code to this address.
+    Enter it when creating your election to unlock your plan.
+  </p>
+</div>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"Payment receipt received for {org_name}.\n"
+        f"Plan: {plan_name} — ${amount_usd:.2f}\n"
+        f"Reference: {payment_reference}\n"
+        f"Tracking ID: {payment_id[:8].upper()}\n\n"
+        f"We will email your licence code within one business day."
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - Payment Receipt Received: "
+        f"{plan_name.capitalize()} Plan",
+        html, text
+    )
+
+
 def send_admin_voter_approval_needed(
     admin_email: str, admin_name: str,
     voter_name: str, voter_email: str,

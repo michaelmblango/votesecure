@@ -193,6 +193,36 @@ def create_election(
         )
         new_election = cursor.fetchone()
 
+        # ── Free tier voter limit enforcement ──────────────────
+        # voters/users have no org_id column - voter_invites.org_id
+        # is used as the scoping proxy (an invite is created per org
+        # and linked to the resulting voter_id once approved).
+        if not data.licence_id:
+            org_id = current_user.get("org")
+            if org_id:
+                cursor.execute(
+                    """
+                    SELECT COUNT(DISTINCT vi.voter_id) AS cnt
+                    FROM voter_invites vi
+                    WHERE vi.org_id = %s
+                      AND vi.status = 'approved'
+                      AND vi.voter_id IS NOT NULL
+                    """,
+                    (org_id,)
+                )
+                voter_count = cursor.fetchone()["cnt"]
+                FREE_LIMIT  = 10
+                if voter_count > FREE_LIMIT:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=(
+                            f"Your organisation has {voter_count} approved "
+                            f"voters but the free plan supports up to "
+                            f"{FREE_LIMIT}. Purchase a licence to run "
+                            f"this election."
+                        )
+                    )
+
         # Mark licence as used if provided
         if data.licence_id:
             election_id = str(new_election["election_id"])
