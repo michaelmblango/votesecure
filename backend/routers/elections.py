@@ -632,3 +632,49 @@ def list_candidates(
     finally:
         cursor.close()
         conn.close()
+
+
+# ════════════════════════════════════════════════════════════
+# PUBLIC CANDIDATE PROFILE
+# No authentication required.
+# ════════════════════════════════════════════════════════════
+@router.get("/candidates/{candidate_id}/profile")
+def get_candidate_profile(candidate_id: str):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT
+                c.candidate_id,
+                c.display_name,
+                c.manifesto,
+                c.photo_url,
+                c.approval_status,
+                c.display_order,
+                p.position_name,
+                p.position_id,
+                e.title        AS election_title,
+                e.election_id,
+                e.status       AS election_status
+            FROM candidates c
+            JOIN positions  p ON c.position_id  = p.position_id
+            JOIN elections  e ON p.election_id  = e.election_id
+            WHERE c.candidate_id = %s
+              AND c.approval_status = 'approved'
+            """,
+            (candidate_id,)
+        )
+        candidate = cursor.fetchone()
+        if not candidate:
+            raise HTTPException(
+                status_code=404,
+                detail="Candidate not found."
+            )
+        return dict(candidate)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()

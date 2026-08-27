@@ -58,6 +58,8 @@ export const electionsAPI = {
   approveCandidate: (id, candId, approval_status) =>
                       api.patch(`/elections/${id}/candidates/${candId}/status`, { approval_status }),
   listCandidates:   (id)          => api.get(`/elections/${id}/candidates`),
+  getCandidateProfile: (candidateId) =>
+                      api.get(`/elections/candidates/${candidateId}/profile`),
 };
 
 // ── Votes ────────────────────────────────────────────────────

@@ -71,8 +71,8 @@ class PositionCreate(BaseModel):
 # ── CANDIDATE ────────────────────────────────────────────────
 class CandidateCreate(BaseModel):
     display_name:  str
-    manifesto:     Optional[str]
-    photo_url:     Optional[str]
+    manifesto:     Optional[str] = None
+    photo_url:     Optional[str] = None
     display_order: int = 0
 
 

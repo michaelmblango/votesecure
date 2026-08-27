@@ -119,7 +119,26 @@ function CandidateRow({ candidate, electionId, electionStatus, onUpdate }) {
       </div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontWeight:600, color:"var(--ink)", fontSize:"0.9375rem" }}>{candidate.display_name}</div>
-        {candidate.manifesto && <div style={{ fontSize:"0.8125rem", color:"var(--slate)", marginTop:2 }} className="truncate-2">{candidate.manifesto}</div>}
+        {candidate.manifesto && (
+          <details style={{ marginTop: 4 }}>
+            <summary style={{
+              fontSize: "0.8125rem", color: "var(--blue)",
+              cursor: "pointer", fontWeight: 600, listStyle: "none",
+            }}>
+              View manifesto
+            </summary>
+            <div style={{
+              fontSize: "0.8125rem", color: "var(--slate)",
+              marginTop: "0.5rem", lineHeight: 1.6,
+              whiteSpace: "pre-wrap",
+              padding: "0.75rem",
+              background: "var(--ice)",
+              borderRadius: 8,
+            }}>
+              {candidate.manifesto}
+            </div>
+          </details>
+        )}
         <span className={`badge ${badgeCls}`} style={{ marginTop:6 }}>{candidate.approval_status}</span>
       </div>
       {electionStatus === "draft" && (

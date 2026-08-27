@@ -25,6 +25,7 @@ import ResetPasswordPage  from "./pages/ResetPasswordPage";
 import SuperLoginPage   from "./pages/SuperAdmin/SuperLoginPage";
 import SuperDashboard   from "./pages/SuperAdmin/SuperDashboard";
 import PublicResultsPage from "./pages/PublicResultsPage";
+import CandidateProfilePage from "./pages/CandidateProfilePage";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -127,6 +128,8 @@ export default function App() {
           <Route path="/super/dashboard" element={<SuperDashboard />} />
           {/* Public results share page - standalone, no navbar/footer, no auth */}
           <Route path="/results/public/:election_id" element={<PublicResultsPage />} />
+          {/* Public candidate profile page - standalone, no navbar/footer, no auth */}
+          <Route path="/candidates/:candidate_id" element={<CandidateProfilePage />} />
           <Route path="/*" element={<AppRoutes />} />
         </Routes>
       </AuthProvider>

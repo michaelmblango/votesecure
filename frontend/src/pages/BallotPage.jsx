@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { electionsAPI, votesAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -58,10 +59,21 @@ function VoteSuccess({ receipt, onDone }) {
 
 // ── Candidate Card ────────────────────────────────────────────
 function CandidateCard({ candidate, selected, onSelect, disabled }) {
+  // A plain div (not <button>) because it needs to contain a nested
+  // <Link> for "View full profile" - an <a> inside a <button> is
+  // invalid HTML and browsers will hoist/break it. role="button" +
+  // onKeyDown keeps it keyboard-accessible.
+  const activate = () => !disabled && onSelect(candidate.candidate_id);
   return (
-    <button
-      onClick={() => !disabled && onSelect(candidate.candidate_id)}
-      disabled={disabled}
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      aria-pressed={selected}
+      onClick={activate}
+      onKeyDown={e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
+      }}
       style={{
         width:"100%", textAlign:"left", padding:"1rem 1.125rem",
         borderRadius:10, border:`2px solid ${selected ? "var(--blue)" : "var(--border)"}`,
@@ -91,6 +103,21 @@ function CandidateCard({ candidate, selected, onSelect, disabled }) {
             {candidate.manifesto}
           </div>
         )}
+        {candidate.manifesto && (
+          <Link
+            to={`/candidates/${candidate.candidate_id}`}
+            onClick={e => e.stopPropagation()}
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--blue)",
+              textDecoration: "none",
+              fontWeight: 600,
+              display: "inline-block",
+              marginTop: "0.375rem",
+            }}>
+            View full profile →
+          </Link>
+        )}
       </div>
       <div style={{
         width:22, height:22, borderRadius:"50%", flexShrink:0,
@@ -101,7 +128,7 @@ function CandidateCard({ candidate, selected, onSelect, disabled }) {
       }}>
         {selected && <svg width="12" height="12" fill="white" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5l-1 1 4 4 6-7-1-1z"/></svg>}
       </div>
-    </button>
+    </div>
   );
 }
 
