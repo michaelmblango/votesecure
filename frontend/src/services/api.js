@@ -98,6 +98,7 @@ export const licenceAPI = {
   requestLicence: (data) => api.post("/licences/request", data),
   activate:       (data) => api.post("/licences/activate", data),
   myLicences:     ()     => api.get("/licences/my-licences"),
+  paymentHistory: ()     => api.get("/licences/payment-history"),
 };
 
 // ── Admin Approvals ──────────────────────────────────────────

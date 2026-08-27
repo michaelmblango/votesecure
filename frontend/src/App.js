@@ -13,6 +13,7 @@ import AuditLogPage     from "./pages/AuditLogPage";
 import ApprovalsPage    from "./pages/ApprovalsPage";
 import VoterRegisterPage   from "./pages/VoterRegisterPage";
 import VoterManagementPage from "./pages/VoterManagementPage";
+import PaymentHistoryPage  from "./pages/PaymentHistoryPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
 import LandingPage      from "./pages/LandingPage";
@@ -73,6 +74,9 @@ function AppRoutes() {
           }/>
           <Route path="/admin/voters" element={
             <ProtectedRoute adminOnly><VoterManagementPage /></ProtectedRoute>
+          }/>
+          <Route path="/admin/billing" element={
+            <ProtectedRoute adminOnly><PaymentHistoryPage /></ProtectedRoute>
           }/>
 
           {/* ── Organisation / SaaS ── */}

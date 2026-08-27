@@ -548,6 +548,7 @@ export default function AdminDashboard() {
         <div style={{ display: "flex", gap: "0.625rem" }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setShowVoter(true)}>+ Register Voter</button>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/voters")}>Invite Voters</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/billing")}>Billing</button>
           <button className="btn btn-navy btn-sm"  onClick={() => setShowCreate(true)}>+ New Election</button>
         </div>
       </div>
