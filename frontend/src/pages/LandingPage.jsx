@@ -501,6 +501,8 @@ export default function LandingPage() {
           <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
             {[
               { to: "/pricing",    label: "Pricing"      },
+              { to: "/about",      label: "About"        },
+              { to: "/contact",    label: "Contact"      },
               { to: "/org/signup", label: "Sign Up"       },
               { to: "/org/login",  label: "Admin Login"   },
               { to: "/login",      label: "Voter Login"   },

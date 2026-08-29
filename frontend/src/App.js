@@ -17,6 +17,8 @@ import PaymentHistoryPage  from "./pages/PaymentHistoryPage";
 import VerifyVotePage   from "./pages/VerifyVotePage";
 import NotFound         from "./pages/NotFound";
 import LandingPage      from "./pages/LandingPage";
+import AboutPage        from "./pages/AboutPage";
+import ContactPage      from "./pages/ContactPage";
 import PricingPage      from "./pages/PricingPage";
 import OrgSignupPage    from "./pages/OrgSignupPage";
 import OrgJoinPage      from "./pages/OrgJoinPage";
@@ -81,6 +83,8 @@ function AppRoutes() {
 
           {/* ── Organisation / SaaS ── */}
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/about"   element={<AboutPage />}   />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/org/signup" element={<OrgSignupPage />} />
           <Route path="/org/join/:invite_code" element={<OrgJoinPage />} />
           <Route path="/org/login" element={<OrgLoginPage />} />

@@ -60,6 +60,8 @@ export default function Navbar() {
 
   const publicLinks = [
     { to: "/pricing",   label: "Pricing"      },
+    { to: "/about",     label: "About"        },
+    { to: "/contact",   label: "Contact"      },
     { to: "/org/login", label: "Admin Sign In" },
   ];
 
