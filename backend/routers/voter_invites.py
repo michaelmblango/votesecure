@@ -14,7 +14,7 @@
 import secrets
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List
 from database import get_connection
 from config import settings
@@ -24,6 +24,7 @@ from services.email_service import (
     send_voter_invite_email,
     send_voter_registration_confirmed,
     send_voter_approved_email,
+    send_voter_approved_with_credentials,
     send_admin_voter_approval_needed,
 )
 
@@ -40,11 +41,33 @@ class BulkInvite(BaseModel):
     note:   Optional[str] = None
 
 class VoterSelfRegister(BaseModel):
-    full_name:      str
-    student_number: str
-    password:       str
-    department:     Optional[str] = None
-    level:          Optional[str] = None
+    username:   str
+    password:   str
+    full_name:  str
+    department: Optional[str] = None
+
+    @validator("username")
+    def username_valid(cls, v):
+        import re
+        # Lower-cased so it matches login's case-insensitive lookup
+        # and so the exact-match uniqueness check below can't be
+        # bypassed by two users registering the same name in
+        # different cases (e.g. "John.Doe" vs "john.doe").
+        v = v.strip().lower()
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters")
+        if not re.match(r'^[a-zA-Z0-9._@+-]+$', v):
+            raise ValueError(
+                "Username can only contain letters, numbers, "
+                "dots, underscores, @, +, and hyphens"
+            )
+        return v
+
+    @validator("password")
+    def password_valid(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 class ApprovalDecision(BaseModel):
     approved: bool
@@ -344,7 +367,7 @@ def voter_self_register(code: str, data: VoterSelfRegister):
     conn   = get_connection()
     cursor = conn.cursor()
     try:
-        # Get and validate invite
+        # Validate invite
         cursor.execute(
             """
             SELECT vi.*, o.org_name, o.org_id
@@ -356,57 +379,94 @@ def voter_self_register(code: str, data: VoterSelfRegister):
         )
         invite = cursor.fetchone()
         if not invite:
-            raise HTTPException(status_code=404, detail="Invite not found.")
+            raise HTTPException(status_code=404,
+                                detail="Invite not found.")
         if invite["status"] not in ("pending",):
-            raise HTTPException(status_code=400, detail=f"This invite is {invite['status']}.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"This invite has already been used "
+                       f"(status: {invite['status']})."
+            )
         if invite["expires_at"] < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="This invite link has expired.")
+            raise HTTPException(status_code=400,
+                                detail="This invite link has expired.")
 
-        # Check student number not already taken
+        # Check username not already taken
         cursor.execute(
-            "SELECT voter_id FROM voters WHERE student_number = %s",
-            (data.student_number,)
+            "SELECT user_id FROM users WHERE username = %s",
+            (data.username,)
         )
         if cursor.fetchone():
             raise HTTPException(
                 status_code=409,
-                detail="A voter with this student number already exists."
+                detail="This username is already taken. "
+                       "Please choose a different one."
             )
 
         password_hash = hash_password(data.password)
 
-        # Create user record - is_active FALSE until an admin approves.
-        # This is the real gate: auth.py's login step rejects inactive
-        # accounts before a JWT is ever issued, so an unapproved voter
-        # can't reach votes.py at all. (eligibility_group alone does
-        # NOT block voting - votes.py only checks it when the election
-        # itself has eligible_group set, which is not the default.)
+        # Create user record with username - is_active FALSE until
+        # an admin approves. This is the real gate: auth.py's login
+        # step rejects inactive accounts before a JWT is ever issued.
+        # NOTE: the ON CONFLICT (email) branch below will overwrite
+        # password_hash/username on any pre-existing users row with
+        # this email - safe for a voter re-registering after a
+        # failed attempt, but it means an org owner must not reuse
+        # an existing admin's or another voter's email when creating
+        # an invite, since it would silently take over that account.
         cursor.execute(
             """
-            INSERT INTO users (full_name, email, password_hash, role, is_active)
-            VALUES (%s, %s, %s, 'voter', FALSE)
+            INSERT INTO users
+                (full_name, email, password_hash,
+                 role, username, is_active)
+            VALUES (%s, %s, %s, 'voter', %s, FALSE)
             ON CONFLICT (email) DO UPDATE
-                SET full_name = EXCLUDED.full_name
+                SET full_name     = EXCLUDED.full_name,
+                    username      = EXCLUDED.username,
+                    password_hash = EXCLUDED.password_hash
             RETURNING user_id
             """,
-            (data.full_name, invite["email"], password_hash)
+            (data.full_name, invite["email"],
+             password_hash, data.username)
         )
         user_id = str(cursor.fetchone()["user_id"])
 
-        # Create voter record - voters has no is_active column.
+        # Create voter record. student_number is no longer voter-
+        # facing, but the column is still NOT NULL + UNIQUE, so an
+        # opaque placeholder is generated instead.
         cursor.execute(
             """
             INSERT INTO voters
                 (user_id, student_number, department,
                  level, eligibility_group)
-            VALUES (%s, %s, %s, %s, 'pending')
+            VALUES (%s, %s, %s, NULL, 'pending')
+            ON CONFLICT (student_number) DO NOTHING
             RETURNING voter_id
             """,
-            (user_id, data.student_number, data.department, data.level)
+            (user_id, f"VS-{user_id[:8].upper()}",
+             data.department)
         )
-        voter_id = str(cursor.fetchone()["voter_id"])
+        result = cursor.fetchone()
 
-        # Update invite status to registered
+        if not result:
+            # Student number conflict — generate a different one
+            import secrets
+            sn = f"VS-{secrets.token_hex(4).upper()}"
+            cursor.execute(
+                """
+                INSERT INTO voters
+                    (user_id, student_number, department,
+                     level, eligibility_group)
+                VALUES (%s, %s, %s, NULL, 'pending')
+                RETURNING voter_id
+                """,
+                (user_id, sn, data.department)
+            )
+            result = cursor.fetchone()
+
+        voter_id = str(result["voter_id"])
+
+        # Update invite
         cursor.execute(
             """
             UPDATE voter_invites
@@ -417,16 +477,20 @@ def voter_self_register(code: str, data: VoterSelfRegister):
         )
         conn.commit()
 
-        # Send confirmation email to voter
+        # Send registration received email
         send_voter_registration_confirmed(
             email=invite["email"],
             name=data.full_name,
             org_name=invite["org_name"],
         )
 
-        # Notify all admins that approval is needed
+        # Notify all admins
         cursor.execute(
-            "SELECT full_name, email FROM org_admins WHERE org_id = %s AND is_active = TRUE",
+            """
+            SELECT full_name, email
+            FROM org_admins
+            WHERE org_id = %s AND is_active = TRUE
+            """,
             (str(invite["org_id"]),)
         )
         admins = cursor.fetchall()
@@ -443,8 +507,12 @@ def voter_self_register(code: str, data: VoterSelfRegister):
             )
 
         return {
-            "message": "Registration successful. Your account is pending approval from the organisation administrators. You will receive an email when approved.",
-            "status":  "pending_approval",
+            "message": (
+                "Registration successful. Your account is pending "
+                "approval from the administrators. You will receive "
+                "an email with your login credentials once approved."
+            ),
+            "status": "pending_approval",
         }
     except HTTPException:
         raise
@@ -582,14 +650,35 @@ def decide_voter(
                 )
             conn.commit()
 
-            # Email voter that they are approved
-            if invite["email"] and invite["voter_name"]:
-                send_voter_approved_email(
-                    email=invite["email"],
-                    name=invite["voter_name"],
-                    org_name=invite["org_name"],
-                    login_url=f"{settings.PLATFORM_URL}/login",
+            # Email voter that they are approved - include their
+            # username/credentials if they registered with one.
+            if invite["voter_id"]:
+                cursor.execute(
+                    """
+                    SELECT u.username, u.email
+                    FROM voters v
+                    JOIN users u ON v.user_id = u.user_id
+                    WHERE v.voter_id = %s
+                    """,
+                    (str(invite["voter_id"]),)
                 )
+                voter_user = cursor.fetchone()
+
+                if voter_user and voter_user["username"]:
+                    send_voter_approved_with_credentials(
+                        email=voter_user["email"],
+                        name=invite["voter_name"],
+                        username=voter_user["username"],
+                        org_name=invite["org_name"],
+                        login_url=f"{settings.PLATFORM_URL}/login",
+                    )
+                elif invite["email"] and invite["voter_name"]:
+                    send_voter_approved_email(
+                        email=invite["email"],
+                        name=invite["voter_name"],
+                        org_name=invite["org_name"],
+                        login_url=f"{settings.PLATFORM_URL}/login",
+                    )
 
             return {
                 "status":  "approved",

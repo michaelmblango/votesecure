@@ -693,6 +693,103 @@ def send_payment_receipt_confirmation(
     )
 
 
+def send_voter_approved_with_credentials(
+    email: str,
+    name: str,
+    username: str,
+    org_name: str,
+    login_url: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<div style="background:#DCFCE7;border-radius:12px;
+            padding:24px;text-align:center;margin-bottom:24px;">
+  <p style="font-size:28px;margin:0 0 8px;">&#10003;</p>
+  <p style="font-size:20px;font-weight:800;
+            color:#065F46;margin:0;">
+    You are approved to vote!
+  </p>
+  <p style="font-size:13px;color:#059669;margin:8px 0 0;">
+    {org_name}
+  </p>
+</div>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  Your voter account has been approved by the organisation
+  administrators. Save your login credentials below.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:12px;">
+    Your Login Credentials
+  </div>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:8px 0;
+                 border-bottom:1px solid #E2E8F0;">
+        Username
+      </td>
+      <td style="font-size:15px;font-weight:800;color:#0D2B55;
+                 text-align:right;padding:8px 0;
+                 border-bottom:1px solid #E2E8F0;
+                 font-family:monospace;">
+        {username}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:8px 0;">
+        Password
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;padding:8px 0;">
+        The password you set during registration
+      </td>
+    </tr>
+  </table>
+</div>
+<div style="background:#FEF3C7;border-left:4px solid #D97706;
+            border-radius:6px;padding:14px 16px;
+            margin-bottom:24px;">
+  <p style="color:#92400E;font-size:13px;margin:0;
+            font-weight:600;">
+    Keep this email safe
+  </p>
+  <p style="color:#92400E;font-size:13px;margin:8px 0 0;">
+    Your username is <strong>{username}</strong>.
+    Use the password you set during registration.
+    You will need both every time you log in.
+  </p>
+</div>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{login_url}"
+     style="background:#0D2B55;color:#ffffff;
+            text-decoration:none;padding:14px 32px;
+            border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Log In and Vote
+  </a>
+</div>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"You are approved to vote in {org_name}.\n\n"
+        f"Your login credentials:\n"
+        f"  Username: {username}\n"
+        f"  Password: the password you set during registration\n\n"
+        f"Log in at: {login_url}\n\n"
+        f"Keep this email safe — you will need your username "
+        f"every time you log in."
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - You Are Approved to Vote: {org_name}",
+        html, text
+    )
+
+
 def send_admin_voter_approval_needed(
     admin_email: str, admin_name: str,
     voter_name: str, voter_email: str,

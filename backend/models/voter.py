@@ -43,10 +43,11 @@ class VoterRegister(BaseModel):
 class VoterLogin(BaseModel):
     """
     Data required for Step 1 of login.
-    Voter submits their student number and password.
+    Voter submits an identifier - username, email, or
+    student number - plus their password.
     """
-    student_number: str
-    password:       str
+    identifier: str
+    password:   str
 
 
 class OTPVerify(BaseModel):

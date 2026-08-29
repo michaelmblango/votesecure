@@ -153,8 +153,14 @@ def login_step1(data: VoterLogin, request: Request):
     cursor = conn.cursor()
 
     try:
+        # Lockout tracking is a raw Redis key keyed on this string
+        # (login_attempts:{value}), so it must be normalized the
+        # same way at every call site - otherwise "John.Doe" and
+        # "john.doe" would track separate counters.
+        identifier = data.identifier.strip().lower()
+
         # ── Check for account lockout ─────────────────────
-        if is_account_locked(data.student_number):
+        if is_account_locked(identifier):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=(
@@ -164,16 +170,23 @@ def login_step1(data: VoterLogin, request: Request):
                 ),
             )
 
-        # ── Find voter by student number ──────────────────
+        # ── Find voter by username, student number, or email ──
+        # Case-insensitive on all three: existing student numbers
+        # are stored upper-cased, usernames are stored as submitted
+        # (the frontend lower-cases them), and email login should
+        # never be case-sensitive.
         cursor.execute(
             """
             SELECT u.user_id, u.full_name, u.email,
                    u.password_hash, u.role, u.is_active
-            FROM voters v
-            JOIN users  u ON v.user_id = u.user_id
-            WHERE v.student_number = %s
+            FROM users u
+            LEFT JOIN voters v ON u.user_id = v.user_id
+            WHERE LOWER(u.username)      = LOWER(%s)
+               OR LOWER(v.student_number) = LOWER(%s)
+               OR LOWER(u.email)          = LOWER(%s)
+            LIMIT 1
             """,
-            (data.student_number.upper(),)
+            (data.identifier, data.identifier, data.identifier)
         )
         user = cursor.fetchone()
 
@@ -181,7 +194,7 @@ def login_step1(data: VoterLogin, request: Request):
         # (Security: never tell an attacker "wrong password"
         #  vs "user not found" - both return the same message)
         if not user or not verify_password(data.password, user["password_hash"]):
-            attempts = record_failed_attempt(data.student_number)
+            attempts = record_failed_attempt(identifier)
             remaining = settings.MAX_LOGIN_ATTEMPTS - attempts
 
             # Log the failed attempt
@@ -192,13 +205,13 @@ def login_step1(data: VoterLogin, request: Request):
                 VALUES ('voter', 'LOGIN_FAILED_PASSWORD', %s, %s)
                 """,
                 (
-                    f"Failed login for student number: {data.student_number}",
+                    f"Failed login for identifier: {data.identifier}",
                     str(request.client.host),
                 )
             )
             conn.commit()
 
-            detail = "Invalid student number or password."
+            detail = "Invalid username or password."
             if remaining > 0:
                 detail += f" {remaining} attempt(s) remaining."
 
@@ -292,7 +305,7 @@ def login_step2(data: OTPVerify, request: Request):
 
         # ── OTP correct - fetch user details ──────────────
         cursor.execute(
-            "SELECT user_id, full_name, email, role FROM users WHERE user_id = %s",
+            "SELECT user_id, full_name, email, role, username FROM users WHERE user_id = %s",
             (data.user_id,)
         )
         user = cursor.fetchone()
@@ -307,14 +320,21 @@ def login_step2(data: OTPVerify, request: Request):
         access_token = create_access_token(user_id=user_id, role=role)
 
         # ── Clear failed attempts on success ──────────────
-        # We need student_number to clear - fetch from voters
+        # Login can succeed via username, student number, or email
+        # (see login_step1), and the lockout counter is keyed by
+        # whichever one was actually typed - clear all three so a
+        # voter who alternates identifiers never gets stuck with a
+        # stale counter under one of them.
+        clear_failed_attempts(user["email"].lower())
+        if user["username"]:
+            clear_failed_attempts(user["username"].lower())
         cursor.execute(
             "SELECT student_number FROM voters WHERE user_id = %s",
             (user_id,)
         )
         voter_row = cursor.fetchone()
         if voter_row:
-            clear_failed_attempts(voter_row["student_number"])
+            clear_failed_attempts(voter_row["student_number"].lower())
 
         # ── Update last login timestamp ───────────────────
         cursor.execute(
@@ -429,25 +449,28 @@ def debug_login(data: VoterLogin):
     conn   = get_connection()
     cursor = conn.cursor()
     try:
-        # Step 1: Does the student number exist?
+        # Step 1: Does the identifier exist (username, student number, or email)?
         cursor.execute(
             """
             SELECT u.user_id, u.full_name, u.email,
                    u.password_hash, u.role, u.is_active,
-                   v.student_number
-            FROM voters v
-            JOIN users u ON v.user_id = u.user_id
-            WHERE v.student_number = %s
+                   u.username, v.student_number
+            FROM users u
+            LEFT JOIN voters v ON u.user_id = v.user_id
+            WHERE LOWER(u.username)      = LOWER(%s)
+               OR LOWER(v.student_number) = LOWER(%s)
+               OR LOWER(u.email)          = LOWER(%s)
+            LIMIT 1
             """,
-            (data.student_number.upper(),)
+            (data.identifier, data.identifier, data.identifier)
         )
         user = cursor.fetchone()
 
         if not user:
             return {
                 "found":   False,
-                "problem": "No voter found with this student number",
-                "tried":   data.student_number.upper(),
+                "problem": "No user found with this identifier",
+                "tried":   data.identifier,
             }
 
         # Step 2: Does the password match?

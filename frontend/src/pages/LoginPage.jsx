@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [otpMessage, setOtpMessage] = useState("");
   const [error, setError]           = useState("");
   const [loading, setLoading]       = useState(false);
+  const [resending, setResending]   = useState(false);
+  const [resent, setResent]         = useState(false);
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +42,17 @@ export default function LoginPage() {
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setLoading(false); }
+  };
+
+  const handleResend = async () => {
+    setResending(true); setResent(false);
+    try {
+      const res = await authAPI.login(studentNumber, password);
+      setUserId(res.data.user_id);
+      setResent(true);
+      setTimeout(() => setResent(false), 4000);
+    } catch {}
+    finally { setResending(false); }
   };
 
   return (
@@ -92,12 +105,12 @@ export default function LoginPage() {
             {step === 1 && (
               <form onSubmit={handlePasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div>
-                  <label className="input-label">Student Registration Number</label>
+                  <label className="input-label">Username, Email, or Student Number</label>
                   <input
                     className="input"
                     value={studentNumber}
                     onChange={e => setStudentNumber(e.target.value)}
-                    placeholder="e.g. CS/2021/001"
+                    placeholder="Enter your username or email"
                     required
                   />
                 </div>
@@ -147,6 +160,14 @@ export default function LoginPage() {
                   onClick={() => { setStep(1); setError(""); setOtpCode(""); }}
                   className="btn btn-ghost" style={{ alignSelf: "center", fontSize: "0.8125rem", minHeight: "44px" }}>
                   ← Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="btn btn-ghost"
+                  style={{ alignSelf: "center", fontSize: "0.8125rem" }}>
+                  {resending ? "Sending..." : resent ? "✓ Code resent!" : "Resend code"}
                 </button>
               </form>
             )}
