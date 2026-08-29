@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useWindowSize } from "../hooks/useWindowSize";
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isOwner } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [open, setOpen] = useState(false);
@@ -44,13 +44,22 @@ export default function Navbar() {
     borderBottom: "1px solid var(--border)",
   });
 
-  const adminLinks = [
+  const ownerAdminLinks = [
     { to: "/admin",            label: "Dashboard"  },
     { to: "/admin/voters",     label: "Voters"     },
     { to: "/results",          label: "Results"    },
     { to: "/admin/audit",      label: "Audit Log"  },
     { to: "/admin/approvals",  label: "Approvals"  },
   ];
+
+  const coAdminLinks = [
+    { to: "/admin",            label: "Dashboard"  },
+    { to: "/admin/approvals",  label: "Approvals"  },
+    { to: "/results",          label: "Results"    },
+    { to: "/admin/audit",      label: "Audit Log"  },
+  ];
+
+  const adminLinks = isOwner ? ownerAdminLinks : coAdminLinks;
 
   const voterLinks = [
     { to: "/ballot",  label: "My Ballot"   },

@@ -32,6 +32,7 @@ from models.election import (
 from dependencies import get_current_user, require_admin
 from config import settings
 from services.email_service import send_election_open_notification
+from routers.org_auth import require_owner
 
 router = APIRouter()
 
@@ -163,7 +164,7 @@ def get_election(
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_election(
     data: ElectionCreate,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_owner),
 ):
     conn   = get_connection()
     cursor = conn.cursor()
@@ -272,7 +273,7 @@ def create_election(
 def update_election_status(
     election_id: str,
     data: ElectionStatusUpdate,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_owner),
 ):
     conn   = get_connection()
     cursor = conn.cursor()
@@ -403,7 +404,7 @@ def update_election_status(
 def add_position(
     election_id: str,
     data: PositionCreate,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_owner),
 ):
     conn   = get_connection()
     cursor = conn.cursor()
@@ -470,7 +471,7 @@ def add_position(
 def delete_position(
     election_id: str,
     position_id: str,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_owner),
 ):
     conn   = get_connection()
     cursor = conn.cursor()
@@ -515,7 +516,7 @@ def add_candidate(
     election_id: str,
     position_id: str,
     data: CandidateCreate,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_owner),
 ):
     conn   = get_connection()
     cursor = conn.cursor()

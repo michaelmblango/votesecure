@@ -70,6 +70,20 @@ def get_current_org_admin(payload: dict = Depends(verify_admin_token)) -> dict:
     return payload
 
 
+def require_owner(current: dict = Depends(get_current_org_admin)) -> dict:
+    """
+    Dependency that requires the current admin to be
+    the organisation owner (is_owner = True).
+    Returns 403 if not the owner.
+    """
+    if not current.get("owner"):
+        raise HTTPException(
+            status_code=403,
+            detail="This action requires organisation owner access."
+        )
+    return current
+
+
 class OrgSignup(BaseModel):
     org_name:  str
     full_name: str
@@ -297,6 +311,60 @@ def admin_login_otp(data: OTPVerify):
     except HTTPException: raise
     except Exception as e: conn.rollback(); raise HTTPException(500, str(e))
     finally: cursor.close(); conn.close()
+
+
+@router.get("/me/role")
+def get_my_role(current: dict = Depends(get_current_org_admin)):
+    """
+    Returns current admin role details.
+    Used by frontend to determine which UI to show.
+    """
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT
+                a.org_admin_id, a.username, a.full_name,
+                a.email, a.is_owner, a.created_at,
+                o.org_name, o.status, o.org_id,
+                (
+                    SELECT COUNT(*)
+                    FROM org_admins
+                    WHERE org_id = a.org_id AND is_active = TRUE
+                ) AS total_admins
+            FROM org_admins a
+            JOIN organisations o ON a.org_id = o.org_id
+            WHERE a.org_admin_id = %s
+            """,
+            (current["sub"],)
+        )
+        admin = cursor.fetchone()
+        if not admin:
+            raise HTTPException(status_code=404, detail="Not found.")
+
+        return {
+            "org_admin_id": str(admin["org_admin_id"]),
+            "username":     admin["username"],
+            "full_name":    admin["full_name"],
+            "email":        admin["email"],
+            "is_owner":     admin["is_owner"],
+            "org_name":     admin["org_name"],
+            "org_id":       str(admin["org_id"]),
+            "org_status":   admin["status"],
+            "total_admins": admin["total_admins"],
+            "permissions": {
+                "can_create_elections":   admin["is_owner"],
+                "can_invite_voters":      admin["is_owner"],
+                "can_invite_candidates":  admin["is_owner"],
+                "can_approve_voters":     True,
+                "can_approve_candidates": True,
+                "can_view_audit_log":     True,
+                "can_view_results":       True,
+            }
+        }
+    finally:
+        cursor.close(); conn.close()
 
 
 @router.get("/me")

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { electionsAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const STATUS = {
   draft:    { label: "Draft",  cls: "badge-slate" },
@@ -157,6 +158,7 @@ function CandidateRow({ candidate, electionId, electionStatus, onUpdate }) {
 
 // ── Position Panel ────────────────────────────────────────────
 function PositionPanel({ position, election, onUpdate }) {
+  const { isOwner } = useAuth();
   const [showAdd, setShowAdd] = useState(false);
   const approved = position.candidates?.filter(c => c.approval_status === "approved").length ?? 0;
 
@@ -169,7 +171,7 @@ function PositionPanel({ position, election, onUpdate }) {
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
           <span className="badge badge-green">{approved} approved</span>
-          {election.status === "draft" && (
+          {election.status === "draft" && isOwner && (
             <button className="btn btn-ghost btn-sm" style={{ color:"#fff", borderColor:"rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.1)" }} onClick={() => setShowAdd(true)}>
               + Candidate
             </button>
@@ -204,6 +206,7 @@ function PositionPanel({ position, election, onUpdate }) {
 export default function ElectionSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isOwner } = useAuth();
   const [election, setElection]     = useState(null);
   const [loading, setLoading]       = useState(true);
   const [showAddPos, setShowAddPos] = useState(false);
@@ -256,7 +259,7 @@ export default function ElectionSetup() {
             </div>
             {election.description && <p style={{ color:"var(--slate)", fontSize:"0.9rem", margin:0 }}>{election.description}</p>}
           </div>
-          {nx && (
+          {nx && isOwner && (
             <button className={`btn ${nx.cls}`} disabled={busy} onClick={changeStatus}>
               {busy ? "Updating..." : nx.label}
             </button>
@@ -282,7 +285,7 @@ export default function ElectionSetup() {
       {/* Positions section */}
       <div className="section-header">
         <div className="section-title">Positions & Candidates</div>
-        {election.status === "draft" && (
+        {election.status === "draft" && isOwner && (
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddPos(true)}>+ Add Position</button>
         )}
       </div>
@@ -292,7 +295,7 @@ export default function ElectionSetup() {
           <div style={{ fontSize:"2.5rem", marginBottom:"0.75rem" }}>📋</div>
           <div style={{ fontWeight:600, color:"var(--ink)" }}>No positions yet</div>
           <div style={{ fontSize:"0.875rem", marginTop:"0.375rem" }}>Define what voters are choosing between.</div>
-          {election.status === "draft" && (
+          {election.status === "draft" && isOwner && (
             <button className="btn btn-primary" style={{ marginTop:"1.25rem" }} onClick={() => setShowAddPos(true)}>+ Add First Position</button>
           )}
         </div>

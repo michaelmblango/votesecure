@@ -18,7 +18,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from database import get_connection
 from config import settings
-from routers.org_auth import get_current_org_admin
+from routers.org_auth import get_current_org_admin, require_owner
 from services.auth_service import hash_password
 from services.email_service import (
     send_voter_invite_email,
@@ -65,7 +65,7 @@ def make_invite_code() -> str:
 # SEND SINGLE INVITE
 # ════════════════════════════════════════════════════════════════
 @router.post("/send", status_code=201)
-def send_invite(data: SendInvite, current: dict = Depends(get_current_org_admin)):
+def send_invite(data: SendInvite, current: dict = Depends(require_owner)):
     conn   = get_connection()
     cursor = conn.cursor()
     try:
@@ -155,7 +155,7 @@ def send_invite(data: SendInvite, current: dict = Depends(get_current_org_admin)
 @router.post("/send-bulk", status_code=201)
 def send_bulk_invites(
     data: BulkInvite,
-    current: dict = Depends(get_current_org_admin)
+    current: dict = Depends(require_owner)
 ):
     if len(data.emails) > 100:
         raise HTTPException(

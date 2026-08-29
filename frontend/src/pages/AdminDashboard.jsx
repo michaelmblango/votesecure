@@ -423,6 +423,7 @@ function RegisterVoterModal({ onClose }) {
 // ── Election Card ─────────────────────────────────────────────
 function ElectionCard({ election, onRefresh }) {
   const navigate    = useNavigate();
+  const { isOwner } = useAuth();
   const [busy, setBusy] = useState(false);
   const st  = STATUS[election.status] || STATUS.draft;
   const nx  = NEXT[election.status];
@@ -476,7 +477,7 @@ function ElectionCard({ election, onRefresh }) {
         <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => navigate(`/admin/elections/${election.election_id}`)}>
           Manage
         </button>
-        {nx && (
+        {nx && isOwner && (
           <button className={`btn ${nx.cls} btn-sm`} style={{ flex: 1 }} disabled={busy} onClick={changeStatus}>
             {busy ? "..." : nx.label}
           </button>
@@ -488,7 +489,7 @@ function ElectionCard({ election, onRefresh }) {
 
 // ── Main Dashboard ────────────────────────────────────────────
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, isOwner, permissions } = useAuth();
   const navigate = useNavigate();
   const [elections, setElections]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -537,6 +538,24 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {!isOwner && (
+        <div className="alert alert-info animate-in"
+             style={{ borderRadius: 10, marginBottom: "1.5rem" }}>
+          <span>ℹ️</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.875rem" }}>
+              You are a co-administrator
+            </div>
+            <div style={{ fontSize: "0.8125rem" }}>
+              You can view all elections, approve voters and
+              candidates, and vote on admin approvals.
+              Election creation and voter invitations are
+              managed by the organisation owner.
+            </div>
+          </div>
+        </div>
+      )}
+
       <ApprovalPanel adminId={user?.user_id} />
 
       {/* Header */}
@@ -546,10 +565,16 @@ export default function AdminDashboard() {
           <div className="section-sub">Welcome back, {user?.full_name}</div>
         </div>
         <div style={{ display: "flex", gap: "0.625rem" }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowVoter(true)}>+ Register Voter</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/voters")}>Invite Voters</button>
+          {permissions?.canInviteVoters && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowVoter(true)}>+ Register Voter</button>
+          )}
+          {permissions?.canInviteVoters && (
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/voters")}>Invite Voters</button>
+          )}
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/billing")}>Billing</button>
-          <button className="btn btn-navy btn-sm"  onClick={() => setShowCreate(true)}>+ New Election</button>
+          {permissions?.canCreateElections && (
+            <button className="btn btn-navy btn-sm"  onClick={() => setShowCreate(true)}>+ New Election</button>
+          )}
         </div>
       </div>
 
@@ -608,7 +633,7 @@ export default function AdminDashboard() {
           <div style={{ fontSize: "0.875rem", marginTop: "0.375rem" }}>
             {filter === "all" ? "Click New Election to get started." : `No ${filter} elections.`}
           </div>
-          {filter === "all" && (
+          {filter === "all" && permissions?.canCreateElections && (
             <button className="btn btn-navy" style={{ marginTop: "1.25rem" }} onClick={() => setShowCreate(true)}>
               + Create your first election
             </button>

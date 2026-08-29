@@ -35,8 +35,22 @@ export function AuthProvider({ children }) {
   const isAdmin    = isOrgAdmin;
   const isOwner    = user?.is_owner === true;
 
+  const permissions = {
+    canCreateElections:   user?.is_owner === true,
+    canInviteVoters:      user?.is_owner === true,
+    canInviteCandidates:  user?.is_owner === true,
+    canApproveVoters:     !!user,
+    canApproveCandidates: !!user,
+    canViewAuditLog:      !!user,
+    canViewResults:       !!user,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAdmin, isVoter, isOrgAdmin, isOwner }}>
+    <AuthContext.Provider value={{
+      user, login, logout, loading,
+      isAdmin, isVoter, isOrgAdmin, isOwner,
+      permissions,
+    }}>
       {children}
     </AuthContext.Provider>
   );
