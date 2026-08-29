@@ -17,6 +17,7 @@ from routers import org_auth, licences
 from routers import super_admin
 from routers import approvals
 from routers import voter_invites
+from routers import candidate_invites
 
 
 # ── Create the FastAPI app ───────────────────────────────────
@@ -74,6 +75,11 @@ app.include_router(
     voter_invites.router,
     prefix="/api/voter-invites",
     tags=["Voter Invites"]
+)
+app.include_router(
+    candidate_invites.router,
+    prefix="/api/candidate-invites",
+    tags=["Candidate Invites"]
 )
 
 

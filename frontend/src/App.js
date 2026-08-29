@@ -29,6 +29,8 @@ import SuperLoginPage   from "./pages/SuperAdmin/SuperLoginPage";
 import SuperDashboard   from "./pages/SuperAdmin/SuperDashboard";
 import PublicResultsPage from "./pages/PublicResultsPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
+import CandidateRegisterPage from "./pages/CandidateRegisterPage";
+import CandidatePendingPage  from "./pages/CandidatePendingPage";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -42,7 +44,7 @@ function AppRoutes() {
           {/* ── Public ── */}
           <Route path="/login" element={
             user
-              ? <Navigate to={user.role === "voter" ? "/ballot" : "/admin"} replace/>
+              ? <Navigate to={(user.role === "election_admin" || user.role === "system_admin") ? "/admin" : "/ballot"} replace/>
               : <LoginPage />
           }/>
           {/* Verify is public - no login needed */}
@@ -50,6 +52,8 @@ function AppRoutes() {
           {/* Voter self-registration - no ProtectedRoute, voters access
               this before they have an account */}
           <Route path="/voter/register/:code" element={<VoterRegisterPage />} />
+          {/* Candidate self-registration - same reasoning as voter register */}
+          <Route path="/candidate/register/:code" element={<CandidateRegisterPage />} />
 
           {/* ── Voter ── */}
           <Route path="/ballot" element={
@@ -80,6 +84,9 @@ function AppRoutes() {
           <Route path="/admin/billing" element={
             <ProtectedRoute adminOnly><PaymentHistoryPage /></ProtectedRoute>
           }/>
+          <Route path="/admin/candidates/pending" element={
+            <ProtectedRoute adminOnly><CandidatePendingPage /></ProtectedRoute>
+          }/>
 
           {/* ── Organisation / SaaS ── */}
           <Route path="/pricing" element={<PricingPage />} />
@@ -94,7 +101,7 @@ function AppRoutes() {
           {/* ── Default ── */}
           <Route path="/" element={
             user
-              ? <Navigate to={user.role === "voter" ? "/ballot" : "/admin"} replace/>
+              ? <Navigate to={(user.role === "election_admin" || user.role === "system_admin") ? "/admin" : "/ballot"} replace/>
               : <LandingPage />
           }/>
           <Route path="*" element={<NotFound />} />

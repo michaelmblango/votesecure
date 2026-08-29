@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { electionsAPI } from "../services/api";
+import { electionsAPI, candidateInviteAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const STATUS = {
@@ -156,10 +156,132 @@ function CandidateRow({ candidate, electionId, electionStatus, onUpdate }) {
   );
 }
 
+// ── Invite Candidate Modal ─────────────────────────────────────
+function InviteCandidateModal({
+  electionId, positionId, positionName, onClose, onSent
+}) {
+  const [email,   setEmail]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+  const [sent,    setSent]    = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    try {
+      await candidateInviteAPI.send({
+        email,
+        election_id: electionId,
+        position_id: positionId,
+      });
+      setSent(true);
+      onSent();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to send invite.");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal animate-in" style={{ maxWidth: 440 }}>
+        <div className="modal-header">
+          <div style={{ fontWeight: 700, fontSize: "1.0625rem" }}>
+            Invite Candidate
+          </div>
+          <div style={{ fontSize: "0.8125rem",
+                        color: "var(--slate)", marginTop: 2 }}>
+            Position: {positionName}
+          </div>
+        </div>
+        {sent ? (
+          <div className="modal-body">
+            <div className="alert alert-success"
+                 style={{ borderRadius: 10 }}>
+              <span>✓</span>
+              <div>
+                <div style={{ fontWeight: 700 }}>
+                  Invite sent to {email}
+                </div>
+                <div style={{ fontSize: "0.8125rem" }}>
+                  The candidate will receive an email with a
+                  registration link.
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: "1rem",
+                          display: "flex", gap: "0.625rem" }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => { setSent(false); setEmail(""); }}>
+                Invite Another
+              </button>
+              <button
+                className="btn btn-navy"
+                style={{ flex: 1 }}
+                onClick={onClose}>
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="modal-body"
+                 style={{ display: "flex",
+                          flexDirection: "column",
+                          gap: "1rem" }}>
+              <div>
+                <label className="input-label">
+                  Candidate Email Address *
+                </label>
+                <input
+                  className="input"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="candidate@email.com"
+                  required
+                />
+                <div style={{ fontSize: "0.75rem",
+                              color: "var(--slate)",
+                              marginTop: "0.375rem" }}>
+                  The candidate will receive a link to set up
+                  their own account and upload their profile.
+                </div>
+              </div>
+              {error && (
+                <div className="alert alert-error"
+                     style={{ borderRadius: 8 }}>
+                  <span>⚠</span> {error}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-navy"
+                disabled={loading}>
+                {loading ? "Sending..." : "Send Invite"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Position Panel ────────────────────────────────────────────
 function PositionPanel({ position, election, onUpdate }) {
   const { isOwner } = useAuth();
   const [showAdd, setShowAdd] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const approved = position.candidates?.filter(c => c.approval_status === "approved").length ?? 0;
 
   return (
@@ -172,9 +294,22 @@ function PositionPanel({ position, election, onUpdate }) {
         <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
           <span className="badge badge-green">{approved} approved</span>
           {election.status === "draft" && isOwner && (
-            <button className="btn btn-ghost btn-sm" style={{ color:"#fff", borderColor:"rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.1)" }} onClick={() => setShowAdd(true)}>
-              + Candidate
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ color:"#fff", borderColor:"rgba(255,255,255,0.3)",
+                         background:"rgba(255,255,255,0.1)" }}
+                onClick={() => setShowInvite(true)}>
+                Invite Candidate
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ color:"#fff", borderColor:"rgba(255,255,255,0.3)",
+                         background:"rgba(255,255,255,0.1)" }}
+                onClick={() => setShowAdd(true)}>
+                Add Manually
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -196,6 +331,15 @@ function PositionPanel({ position, election, onUpdate }) {
           positionName={position.position_name}
           onClose={() => setShowAdd(false)}
           onAdded={onUpdate}
+        />
+      )}
+      {showInvite && (
+        <InviteCandidateModal
+          electionId={election.election_id}
+          positionId={position.position_id}
+          positionName={position.position_name}
+          onClose={() => setShowInvite(false)}
+          onSent={onUpdate}
         />
       )}
     </div>

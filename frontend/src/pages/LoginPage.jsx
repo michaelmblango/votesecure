@@ -38,7 +38,7 @@ export default function LoginPage() {
       const res = await authAPI.verifyOTP(userId, otpCode);
       const { access_token, user_id, full_name, role } = res.data;
       login(access_token, { user_id, full_name, role });
-      navigate(role === "voter" ? "/ballot" : "/admin");
+      navigate((role === "election_admin" || role === "system_admin") ? "/admin" : "/ballot");
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired code.");
     } finally { setLoading(false); }

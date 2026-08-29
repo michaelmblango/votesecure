@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { electionsAPI, licenceAPI, voterInviteAPI } from "../services/api";
+import { electionsAPI, licenceAPI, voterInviteAPI, candidateInviteAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ApprovalPanel from "../components/ApprovalPanel";
 
@@ -497,6 +497,7 @@ export default function AdminDashboard() {
   const [showVoter, setShowVoter]   = useState(false);
   const [filter, setFilter]         = useState("all");
   const [pendingVoters, setPendingVoters] = useState(0);
+  const [pendingCandidates, setPendingCandidates] = useState(0);
 
   const load = async () => {
     try { setLoading(true); const r = await electionsAPI.list(); setElections(r.data.elections || []); }
@@ -508,6 +509,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     voterInviteAPI.pendingApprovals()
       .then(r => setPendingVoters(r.data.pending?.length || 0))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    candidateInviteAPI.pending()
+      .then(r => setPendingCandidates(r.data.pending?.length || 0))
       .catch(() => {});
   }, []);
 
@@ -609,6 +616,25 @@ export default function AdminDashboard() {
             </div>
             <div style={{ fontSize: "0.8125rem" }}>
               Click to review and approve voter registrations
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingCandidates > 0 && (
+        <div
+          className="alert alert-warning animate-in"
+          style={{ borderRadius: 10, marginBottom: "1rem",
+                   cursor: "pointer" }}
+          onClick={() => navigate("/admin/candidates/pending")}>
+          <span>🙋</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: "0.875rem" }}>
+              {pendingCandidates} candidate
+              {pendingCandidates !== 1 ? "s" : ""} awaiting approval
+            </div>
+            <div style={{ fontSize: "0.8125rem" }}>
+              Click to review and approve candidate registrations
             </div>
           </div>
         </div>

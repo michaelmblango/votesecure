@@ -119,3 +119,12 @@ export const voterInviteAPI = {
   pendingApprovals: ()         => api.get("/voter-invites/pending-approvals"),
   decide:           (id, data) => api.post(`/voter-invites/${id}/decide`, data),
 };
+
+// ── Candidate Invites ────────────────────────────────────────
+export const candidateInviteAPI = {
+  send:            (data)       => api.post("/candidate-invites/send", data),
+  getDetails:      (code)       => api.get(`/candidate-invites/register/${code}`),
+  listForElection: (electionId) => api.get(`/candidate-invites/election/${electionId}`),
+  pending:         ()           => api.get("/candidate-invites/pending"),
+  decide:          (id, data)   => api.post(`/candidate-invites/${id}/decide`, data),
+};

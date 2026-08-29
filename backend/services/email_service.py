@@ -790,6 +790,270 @@ def send_voter_approved_with_credentials(
     )
 
 
+def send_candidate_invite_email(
+    email: str,
+    org_name: str,
+    election_title: str,
+    position_name: str,
+    invite_url: str,
+    invited_by: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Hello,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  <strong>{invited_by}</strong> from <strong>{org_name}</strong>
+  has invited you to stand as a candidate in the following election.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:12px;">
+    Candidacy Details
+  </div>
+  <div style="font-size:16px;font-weight:800;
+              color:#0D2B55;margin-bottom:4px;">
+    {election_title}
+  </div>
+  <div style="font-size:14px;color:#64748B;">
+    Position: <strong>{position_name}</strong>
+  </div>
+</div>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{invite_url}"
+     style="background:#0D2B55;color:#ffffff;
+            text-decoration:none;padding:14px 32px;
+            border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Accept and Register as Candidate
+  </a>
+</div>
+<p style="color:#64748B;font-size:13px;">
+  This invitation expires in <strong>7 days</strong>.
+  You will need to create a username and password, and
+  optionally upload your photo and manifesto.
+  Your candidacy will be reviewed by the administrators
+  before appearing on the ballot.
+</p>""")
+    text = (
+        f"Hello,\n\n"
+        f"You have been invited to stand as a candidate "
+        f"in {election_title} — {org_name}.\n"
+        f"Position: {position_name}\n\n"
+        f"Register at: {invite_url}\n\n"
+        f"This invitation expires in 7 days."
+    )
+    return _send(
+        email, "Candidate",
+        f"You are invited to stand as a candidate: {position_name}",
+        html, text
+    )
+
+
+def send_candidate_registration_confirmed(
+    email: str,
+    name: str,
+    org_name: str,
+    election_title: str,
+    position_name: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  Your candidacy registration for <strong>{org_name}</strong>
+  has been received. The administrators will review your
+  application and notify you of their decision.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:13px;color:#64748B;margin-bottom:6px;">
+    Election
+  </div>
+  <div style="font-size:15px;font-weight:700;
+              color:#0D2B55;margin-bottom:12px;">
+    {election_title}
+  </div>
+  <div style="font-size:13px;color:#64748B;margin-bottom:6px;">
+    Position
+  </div>
+  <div style="font-size:15px;font-weight:700;color:#0D2B55;">
+    {position_name}
+  </div>
+</div>
+<div style="background:#FEF3C7;border-left:4px solid #D97706;
+            border-radius:6px;padding:14px 16px;">
+  <p style="color:#92400E;font-size:13px;margin:0;">
+    You will receive an email once your candidacy is approved.
+    That email will include your login credentials.
+  </p>
+</div>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"Your candidacy for {position_name} in {election_title} "
+        f"has been received. You will be notified once approved."
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - Candidacy Registration Received: {position_name}",
+        html, text
+    )
+
+
+def send_candidate_approved_with_credentials(
+    email: str,
+    name: str,
+    username: str,
+    org_name: str,
+    election_title: str,
+    position_name: str,
+    login_url: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{name}</strong>,
+</p>
+<div style="background:#DCFCE7;border-radius:12px;
+            padding:24px;text-align:center;margin-bottom:24px;">
+  <p style="font-size:28px;margin:0 0 8px;">&#127881;</p>
+  <p style="font-size:20px;font-weight:800;
+            color:#065F46;margin:0;">
+    Your candidacy is approved!
+  </p>
+  <p style="font-size:13px;color:#059669;margin:8px 0 0;">
+    {position_name} — {election_title}
+  </p>
+</div>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  You will appear on the ballot when voting opens.
+  Save your login credentials below for future reference.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:12px;">
+    Your Login Credentials
+  </div>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:8px 0;
+                 border-bottom:1px solid #E2E8F0;">
+        Username
+      </td>
+      <td style="font-size:15px;font-weight:800;color:#0D2B55;
+                 text-align:right;padding:8px 0;
+                 border-bottom:1px solid #E2E8F0;
+                 font-family:monospace;">
+        {username}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-size:13px;color:#64748B;padding:8px 0;">
+        Password
+      </td>
+      <td style="font-size:13px;font-weight:700;color:#0D2B55;
+                 text-align:right;padding:8px 0;">
+        The password you set during registration
+      </td>
+    </tr>
+  </table>
+</div>
+<div style="background:#FEF3C7;border-left:4px solid #D97706;
+            border-radius:6px;padding:14px 16px;
+            margin-bottom:24px;">
+  <p style="color:#92400E;font-size:13px;margin:0;
+            font-weight:600;">
+    Keep this email safe
+  </p>
+  <p style="color:#92400E;font-size:13px;margin:8px 0 0;">
+    Your username is <strong>{username}</strong>.
+    Use the password you created during registration.
+  </p>
+</div>""")
+    text = (
+        f"Dear {name},\n\n"
+        f"Your candidacy for {position_name} in {election_title} "
+        f"has been approved. You will appear on the ballot.\n\n"
+        f"Your login credentials:\n"
+        f"  Username: {username}\n"
+        f"  Password: the password you set during registration\n\n"
+        f"Log in at: {login_url}"
+    )
+    return _send(
+        email, name,
+        f"VoteSecure - Candidacy Approved: {position_name}",
+        html, text
+    )
+
+
+def send_admin_candidate_approval_needed(
+    admin_email: str,
+    admin_name: str,
+    candidate_name: str,
+    candidate_email: str,
+    org_name: str,
+    position_name: str,
+    election_title: str,
+    approval_url: str,
+) -> bool:
+    html = _shell(f"""
+<p style="color:#374151;font-size:15px;margin:0 0 16px;">
+  Dear <strong>{admin_name}</strong>,
+</p>
+<p style="color:#64748B;font-size:14px;line-height:1.6;
+          margin:0 0 20px;">
+  A new candidate has registered and is awaiting your
+  approval for <strong>{org_name}</strong>.
+</p>
+<div style="background:#EEF4FB;border:1px solid #BFDBFE;
+            border-radius:10px;padding:20px;margin-bottom:24px;">
+  <div style="font-size:12px;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.05em;
+              color:#64748B;margin-bottom:8px;">
+    Candidate Details
+  </div>
+  <div style="font-size:16px;font-weight:800;
+              color:#0D2B55;margin-bottom:4px;">
+    {candidate_name}
+  </div>
+  <div style="font-size:13px;color:#64748B;
+              margin-bottom:8px;">
+    {candidate_email}
+  </div>
+  <div style="font-size:13px;color:#64748B;">
+    Position: <strong>{position_name}</strong><br>
+    Election: <strong>{election_title}</strong>
+  </div>
+</div>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{approval_url}"
+     style="background:#0D2B55;color:#ffffff;
+            text-decoration:none;padding:14px 32px;
+            border-radius:8px;font-weight:700;
+            font-size:14px;display:inline-block;">
+    Review and Approve
+  </a>
+</div>""")
+    text = (
+        f"Dear {admin_name},\n\n"
+        f"{candidate_name} ({candidate_email}) has registered "
+        f"as a candidate for {position_name} in {election_title}.\n\n"
+        f"Review at: {approval_url}"
+    )
+    return _send(
+        admin_email, admin_name,
+        f"VoteSecure - Candidate Approval Needed: {candidate_name}",
+        html, text
+    )
+
+
 def send_admin_voter_approval_needed(
     admin_email: str, admin_name: str,
     voter_name: str, voter_email: str,
