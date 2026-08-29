@@ -67,7 +67,11 @@ def list_elections(current_user: dict = Depends(get_current_user)):
         role = current_user.get("role", "voter")
 
         if role in ("system_admin", "election_admin", "auditor"):
-            # Admins see every election
+            # Admins see every election IN THEIR OWN ORG. org_id is
+            # only absent on a legacy non-org admin token (none are
+            # issued by the live app) - fall back to unscoped in
+            # that case rather than showing nothing.
+            org_id = current_user.get("org")
             cursor.execute(
                 """
                 SELECT e.*,
@@ -78,9 +82,11 @@ def list_elections(current_user: dict = Depends(get_current_user)):
                 LEFT JOIN users     u ON e.created_by    = u.user_id
                 LEFT JOIN positions p ON e.election_id   = p.election_id
                 LEFT JOIN votes     v ON e.election_id   = v.election_id
+                WHERE (%s::uuid IS NULL OR e.org_id = %s)
                 GROUP BY e.election_id, u.full_name
                 ORDER BY e.created_at DESC
-                """
+                """,
+                (org_id, org_id)
             )
         else:
             # Voters see only active elections
@@ -174,8 +180,8 @@ def create_election(
             INSERT INTO elections
                 (title, description, election_type, start_time, end_time,
                  eligible_group, is_public_results, created_by, status,
-                 max_voters, plan_name, licence_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'draft', %s, %s, %s)
+                 max_voters, plan_name, licence_id, org_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'draft', %s, %s, %s, %s)
             RETURNING *
             """,
             (
@@ -190,6 +196,7 @@ def create_election(
                 data.max_voters or 10,
                 data.plan_name  or "free",
                 data.licence_id,
+                current_user["org"],
             )
         )
         new_election = cursor.fetchone()
