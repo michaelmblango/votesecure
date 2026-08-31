@@ -72,9 +72,10 @@ export const votesAPI = {
 
 // ── Analytics ────────────────────────────────────────────────
 export const analyticsAPI = {
-  results:   (election_id) => api.get(`/analytics/results/${election_id}`),
-  turnout:   (election_id) => api.get(`/analytics/turnout/${election_id}`),
-  auditLogs: (limit = 50)  => api.get(`/analytics/audit-logs?limit=${limit}`),
+  results:     (election_id) => api.get(`/analytics/results/${election_id}`),
+  turnout:     (election_id) => api.get(`/analytics/turnout/${election_id}`),
+  auditLogs:   (limit = 50)  => api.get(`/analytics/audit-logs?limit=${limit}`),
+  orgOverview: ()             => api.get("/analytics/org/overview"),
 };
 
 // ── Public Results (no auth) ─────────────────────────────────

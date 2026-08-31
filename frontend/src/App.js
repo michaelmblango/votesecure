@@ -31,6 +31,7 @@ import PublicResultsPage from "./pages/PublicResultsPage";
 import CandidateProfilePage from "./pages/CandidateProfilePage";
 import CandidateRegisterPage from "./pages/CandidateRegisterPage";
 import CandidatePendingPage  from "./pages/CandidatePendingPage";
+import AnalyticsDashboard    from "./pages/AnalyticsDashboard";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -86,6 +87,9 @@ function AppRoutes() {
           }/>
           <Route path="/admin/candidates/pending" element={
             <ProtectedRoute adminOnly><CandidatePendingPage /></ProtectedRoute>
+          }/>
+          <Route path="/admin/analytics" element={
+            <ProtectedRoute adminOnly><AnalyticsDashboard /></ProtectedRoute>
           }/>
 
           {/* ── Organisation / SaaS ── */}

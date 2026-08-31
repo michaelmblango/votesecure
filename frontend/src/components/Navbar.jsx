@@ -46,6 +46,7 @@ export default function Navbar() {
 
   const ownerAdminLinks = [
     { to: "/admin",            label: "Dashboard"  },
+    { to: "/admin/analytics",  label: "Analytics"  },
     { to: "/admin/voters",     label: "Voters"     },
     { to: "/results",          label: "Results"    },
     { to: "/admin/audit",      label: "Audit Log"  },

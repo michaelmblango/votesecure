@@ -578,6 +578,7 @@ export default function AdminDashboard() {
           {permissions?.canInviteVoters && (
             <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/voters")}>Invite Voters</button>
           )}
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/analytics")}>Analytics</button>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("/admin/billing")}>Billing</button>
           {permissions?.canCreateElections && (
             <button className="btn btn-navy btn-sm"  onClick={() => setShowCreate(true)}>+ New Election</button>

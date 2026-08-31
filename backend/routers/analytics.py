@@ -383,6 +383,194 @@ def get_public_results(election_id: str):
         cursor.close(); conn.close()
 
 
+@router.get("/org/overview")
+def org_analytics_overview(
+    current_user: dict = Depends(require_admin)
+):
+    """
+    Comprehensive analytics for the current organisation.
+    Returns stats across all elections, voters, candidates.
+    """
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        org_id = current_user.get("org")
+
+        # ── Election stats ────────────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*)                                    AS total_elections,
+                COUNT(*) FILTER (WHERE status = 'active')  AS active_elections,
+                COUNT(*) FILTER (WHERE status = 'draft')   AS draft_elections,
+                COUNT(*) FILTER (WHERE status = 'closed')  AS closed_elections,
+                COUNT(*) FILTER (WHERE status = 'archived')AS archived_elections
+            FROM elections
+            WHERE org_id = %s
+            """,
+            (org_id,)
+        )
+        election_stats = dict(cursor.fetchone() or {})
+
+        # ── Voter stats ───────────────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*)                                           AS total_invited,
+                COUNT(*) FILTER (WHERE status = 'approved')       AS total_approved,
+                COUNT(*) FILTER (WHERE status = 'registered')     AS pending_approval,
+                COUNT(*) FILTER (WHERE status = 'rejected')       AS total_rejected,
+                COUNT(*) FILTER (WHERE status = 'pending')        AS invite_pending
+            FROM voter_invites
+            WHERE org_id = %s
+            """,
+            (org_id,)
+        )
+        voter_stats = dict(cursor.fetchone() or {})
+
+        # ── Candidate stats ───────────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*)                                           AS total_invited,
+                COUNT(*) FILTER (WHERE status = 'approved')       AS total_approved,
+                COUNT(*) FILTER (WHERE status = 'registered')     AS pending_approval,
+                COUNT(*) FILTER (WHERE status = 'rejected')       AS total_rejected
+            FROM candidate_invites
+            WHERE org_id = %s
+            """,
+            (org_id,)
+        )
+        candidate_stats = dict(cursor.fetchone() or {})
+
+        # ── Vote stats ────────────────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                COUNT(v.vote_id) AS total_votes,
+                COUNT(DISTINCT v.election_id) AS elections_with_votes
+            FROM votes v
+            JOIN elections e ON v.election_id = e.election_id
+            WHERE e.org_id = %s
+            """,
+            (org_id,)
+        )
+        vote_stats = dict(cursor.fetchone() or {})
+
+        # ── Recent elections (last 5) ─────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                e.election_id, e.title, e.status,
+                e.start_time, e.end_time, e.plan_name,
+                COUNT(DISTINCT p.position_id)   AS position_count,
+                COUNT(DISTINCT v.vote_id)        AS vote_count,
+                COUNT(DISTINCT ves.voter_id)
+                    FILTER (WHERE ves.has_voted = TRUE) AS voted_count,
+                COUNT(DISTINCT ves.voter_id)     AS registered_count
+            FROM elections e
+            LEFT JOIN positions          p   ON p.election_id   = e.election_id
+            LEFT JOIN votes              v   ON v.election_id   = e.election_id
+            LEFT JOIN voter_election_status ves ON ves.election_id = e.election_id
+            WHERE e.org_id = %s
+            GROUP BY e.election_id, e.title, e.status,
+                     e.start_time, e.end_time, e.plan_name
+            ORDER BY e.created_at DESC
+            LIMIT 5
+            """,
+            (org_id,)
+        )
+        recent_elections = [dict(r) for r in cursor.fetchall()]
+
+        # ── Turnout by election ───────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                e.title,
+                e.status,
+                COUNT(DISTINCT ves.voter_id) AS registered,
+                COUNT(DISTINCT ves.voter_id)
+                    FILTER (WHERE ves.has_voted = TRUE) AS voted,
+                ROUND(
+                    CASE
+                        WHEN COUNT(DISTINCT ves.voter_id) > 0
+                        THEN COUNT(DISTINCT ves.voter_id)
+                             FILTER (WHERE ves.has_voted = TRUE)
+                             * 100.0
+                             / COUNT(DISTINCT ves.voter_id)
+                        ELSE 0
+                    END, 1
+                ) AS turnout_pct
+            FROM elections e
+            LEFT JOIN voter_election_status ves
+                ON ves.election_id = e.election_id
+            WHERE e.org_id = %s
+              AND e.status IN ('active','closed','archived')
+            GROUP BY e.election_id, e.title, e.status
+            ORDER BY e.created_at DESC
+            LIMIT 10
+            """,
+            (org_id,)
+        )
+        turnout_data = [dict(r) for r in cursor.fetchall()]
+
+        # ── Activity over last 30 days ────────────────────────
+        # actor_id and org_admin_id are both uuid columns already -
+        # no cast needed (and casting only one side to text breaks
+        # the comparison with a Postgres type mismatch).
+        cursor.execute(
+            """
+            SELECT
+                DATE(al.timestamp) AS day,
+                COUNT(*)           AS event_count
+            FROM audit_logs al
+            JOIN org_admins oa ON al.actor_id = oa.org_admin_id
+            WHERE oa.org_id = %s
+              AND al.timestamp >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(al.timestamp)
+            ORDER BY day ASC
+            """,
+            (org_id,)
+        )
+        activity = [
+            {
+                "day":         str(r["day"]),
+                "event_count": r["event_count"],
+            }
+            for r in cursor.fetchall()
+        ]
+
+        # ── Licence usage ─────────────────────────────────────
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*)                                      AS total_licences,
+                COUNT(*) FILTER (WHERE status = 'unused')    AS available,
+                COUNT(*) FILTER (WHERE status = 'used')      AS used,
+                COUNT(*) FILTER (WHERE status = 'expired')   AS expired
+            FROM election_licences
+            WHERE org_id = %s
+            """,
+            (org_id,)
+        )
+        licence_stats = dict(cursor.fetchone() or {})
+
+        return {
+            "elections":        election_stats,
+            "voters":           voter_stats,
+            "candidates":       candidate_stats,
+            "votes":            vote_stats,
+            "licences":         licence_stats,
+            "recent_elections": recent_elections,
+            "turnout_data":     turnout_data,
+            "activity":         activity,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close(); conn.close()
+
+
 @router.get("/public/election/{election_id}/check")
 def check_election_public(election_id: str):
     conn   = get_connection()
