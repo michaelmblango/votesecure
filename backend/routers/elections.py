@@ -123,6 +123,13 @@ def get_election(
     try:
         election = get_election_or_404(cursor, election_id)
 
+        # Admins need to see pending/rejected candidates too (to review
+        # and approve them on the election setup page); voters must only
+        # ever see approved candidates, since this same endpoint backs
+        # the ballot.
+        role = current_user.get("role", "voter")
+        is_admin = role in ("system_admin", "election_admin", "auditor")
+
         # Fetch positions for this election
         cursor.execute(
             """
@@ -134,23 +141,36 @@ def get_election(
         )
         positions = cursor.fetchall()
 
-        # Fetch approved candidates for each position
         result_positions = []
         for pos in positions:
             pos_id = str(pos["position_id"])
-            cursor.execute(
-                """
-                SELECT c.*,
-                       COUNT(v.vote_id) AS vote_count
-                FROM candidates c
-                LEFT JOIN votes v ON c.candidate_id = v.candidate_id
-                WHERE c.position_id = %s
-                  AND c.approval_status = 'approved'
-                GROUP BY c.candidate_id
-                ORDER BY c.display_order ASC
-                """,
-                (pos_id,)
-            )
+            if is_admin:
+                cursor.execute(
+                    """
+                    SELECT c.*,
+                           COUNT(v.vote_id) AS vote_count
+                    FROM candidates c
+                    LEFT JOIN votes v ON c.candidate_id = v.candidate_id
+                    WHERE c.position_id = %s
+                    GROUP BY c.candidate_id
+                    ORDER BY c.display_order ASC
+                    """,
+                    (pos_id,)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT c.*,
+                           COUNT(v.vote_id) AS vote_count
+                    FROM candidates c
+                    LEFT JOIN votes v ON c.candidate_id = v.candidate_id
+                    WHERE c.position_id = %s
+                      AND c.approval_status = 'approved'
+                    GROUP BY c.candidate_id
+                    ORDER BY c.display_order ASC
+                    """,
+                    (pos_id,)
+                )
             candidates = cursor.fetchall()
             pos_dict = dict(pos)
             pos_dict["candidates"] = [dict(c) for c in candidates]
